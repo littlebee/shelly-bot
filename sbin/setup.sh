@@ -53,4 +53,13 @@ sudo ldconfig
 sudo cp -f $TMP_DIR/dphys-swapfile /etc
 sudo systemctl restart dphys-swapfile
 
-sudo pip install face-recognition imutils
+sudo pip3 install face-recognition imutils
+
+# I added these to accomodate adeept video streaming
+sudo apt-get install -y libjasper-dev
+sudo apt-get install -y libatlas-base-dev
+
+# Also for adeept
+sudo pip3 install websockets flask flask_cors
+sudo pip3 install opencv-contrib-python==3.4.3.18
+sudo pip3 install zmq pybase64 psutil

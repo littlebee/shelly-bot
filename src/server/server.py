@@ -13,7 +13,7 @@ import websockets
 import socket
 import json
 
-import info
+import system_info
 import app
 
 
@@ -34,7 +34,7 @@ def wifi_check():
     print(ipaddr_check)
 
 
-async def recv_msg(websocket):
+async def recv_msg(websocket, path):
     while True:
         response = {
             'status': 'ok',
@@ -44,10 +44,13 @@ async def recv_msg(websocket):
 
         data = ''
         data = await websocket.recv()
+
         try:
             data = json.loads(data)
         except Exception as e:
             print('not A JSON')
+
+        print(f"got websock message from {websocket}: {data}")
 
         if not data:
             continue
@@ -59,8 +62,8 @@ async def recv_msg(websocket):
 
             if 'get_info' == data:
                 response['title'] = 'get_info'
-                response['data'] = [info.get_cpu_tempfunc(
-                ), info.get_cpu_use(), info.get_ram_info()]
+                response['data'] = [system_info.get_cpu_tempfunc(
+                ), system_info.get_cpu_use(), system_info.get_ram_info()]
 
         else:
             pass

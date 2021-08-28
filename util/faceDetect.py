@@ -13,7 +13,7 @@ CAPTURE_HEIGHT = 208
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--imutilsVideo',
-                    description='Use imutils.video instead of picamera package to capture video'
+                    help='Use imutils.video instead of picamera package to capture video',
                     dest='useImutilsVideo',
                     action='store_true')
 args = parser.parse_args()

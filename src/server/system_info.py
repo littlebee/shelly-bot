@@ -1,3 +1,5 @@
+import psutil
+
 
 def get_cpu_tempfunc():
     """ Return CPU temperature """
