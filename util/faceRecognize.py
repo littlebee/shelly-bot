@@ -1,4 +1,6 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
+
+import os
 
 import sys
 
@@ -7,6 +9,8 @@ import face_recognition
 import pickle
 import time
 import cv2
+
+os.environ["DISPLAY"] = ":0.0"
 
 # This is the file created by trainModel
 encodingsP = "data/encodings.pickle"

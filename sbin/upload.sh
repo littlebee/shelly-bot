@@ -1,4 +1,5 @@
 
+#/bin/sh
 # this script is meant to be run from your local development machine.
 
 
@@ -14,6 +15,7 @@ TARGET_HOST=$1
 TMP_DIR="/tmp/shelly-bot"
 
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR"
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data"
 
 scp -r ./src $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR

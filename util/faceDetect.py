@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 
-
+import os
 from imutils.video import VideoStream
 import face_recognition
 import cv2
@@ -10,6 +11,8 @@ from picamera.array import PiRGBArray
 
 CAPTURE_WIDTH = 320
 CAPTURE_HEIGHT = 208
+
+os.environ["DISPLAY"] = ":0.0"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--imutilsVideo',

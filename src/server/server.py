@@ -1,100 +1,88 @@
-#!/usr/bin/env/python
-# File name   : server.py
-# Production  : GWR
-# Website     : www.adeept.com
-# Author      : William
-# Date        : 2020/03/17
+#!/usr/bin/env python3
+"""
+ This was originally pilfered from
+ https://github.com/adeept/Adeept_RaspTank/blob/a6c45e8cc7df620ad8977845eda2b839647d5a83/server/app.py
 
-import time
-import threading
+ Which looks like it was in turn pilfered from
+ https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
+
+"Great artists steal". Thank you, @adeept and @miguelgrinberg!
+"""
+
 import os
-import asyncio
-import websockets
-import socket
-import json
+import threading
+import time
 
-import system_info
-import app
+from flask import Flask, Response, send_from_directory
+from flask_cors import CORS
 
+from camera_opencv import Camera
+from base_camera import BaseCamera
 
-curpath = os.path.realpath(__file__)
-thisPath = "/" + os.path.dirname(curpath)
+# Raspberry Pi camera module (requires picamera package)
+# from camera_pi import Camera
 
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
 
-def function_select(command_input, response):
-    global functionMode
-    print(f"function_select command_input={command_input}")
-
-
-def wifi_check():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("1.1.1.1", 80))
-    ipaddr_check = s.getsockname()[0]
-    s.close()
-    print(ipaddr_check)
+camera = Camera()
 
 
-async def recv_msg(websocket, path):
+def gen(camera):
+    """Video streaming generator function."""
     while True:
-        response = {
-            'status': 'ok',
-            'title': '',
-            'data': None
-        }
-
-        data = ''
-        data = await websocket.recv()
-
-        try:
-            data = json.loads(data)
-        except Exception as e:
-            print('not A JSON')
-
-        print(f"got websock message from {websocket}: {data}")
-
-        if not data:
-            continue
-
-        if isinstance(data, str):
-            print(f"recv_msg data={data}")
-
-            function_select(data, response)
-
-            if 'get_info' == data:
-                response['title'] = 'get_info'
-                response['data'] = [system_info.get_cpu_tempfunc(
-                ), system_info.get_cpu_use(), system_info.get_ram_info()]
-
-        else:
-            pass
-
-        print(data)
-        response = json.dumps(response)
-        await websocket.send(response)
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 
-if __name__ == '__main__':
+@app.route('/video_feed')
+def video_feed():
+    """Video streaming route. Put this in the src attribute of an img tag."""
+    return Response(gen(camera),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    HOST = ''
-    PORT = 10223  # Define port serial
-    ADDR = (HOST, PORT)
 
-    global flask_app
-    flask_app = app.webapp()
-    flask_app.startthread()
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
-    while 1:
-        wifi_check()
-        try:  # Start server,waiting for client
-            start_server = websockets.serve(recv_msg, '0.0.0.0', 8888)
-            asyncio.get_event_loop().run_until_complete(start_server)
-            print('waiting for connection...')
-            # print('...connected from :', addr)
-            break
-        except Exception as e:
-            print(e)
 
-    try:
-        asyncio.get_event_loop().run_forever()
-    except Exception as e:
-        print(e)
+@app.route('/stats')
+def send_stats():
+    now = time.time()
+    total_time = now - BaseCamera.started_at
+    frames_read = BaseCamera.frames_read
+    frames_read_per_second = frames_read / total_time
+    return {
+        "framesRead": frames_read,
+        "totalTime": total_time,
+        "framesReadPerSecond": frames_read_per_second,
+    }
+
+
+@app.route('/<path:filename>')
+def sendgen(filename):
+    return send_from_directory(dir_path, filename)
+
+
+@app.route('/')
+def index():
+    return send_from_directory(dir_path, 'index.html')
+
+
+class webapp:
+    def __init__(self):
+        self.camera = camera
+
+    def thread(self):
+        app.run(host='0.0.0.0', threaded=True)
+
+    def startthread(self):
+        # Define a thread for FPV and OpenCV
+        fps_threading = threading.Thread(target=self.thread)
+        # 'True' means it is a front thread,it would close when the mainloop() closes
+        fps_threading.setDaemon(False)
+        fps_threading.start()  # Thread starts
+
+
+flask_app = webapp()
+flask_app.startthread()

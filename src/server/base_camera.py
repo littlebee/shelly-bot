@@ -1,3 +1,12 @@
+"""
+This was originally pilfered from
+https://github.com/adeept/Adeept_RaspTank/blob/a6c45e8cc7df620ad8977845eda2b839647d5a83/server/base_camera.py
+
+ Which looks like it was in turn pilfered from
+ https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
+
+"Great artists steal". Thank you, @adeept and @miguelgrinberg!
+"""
 import time
 import threading
 import cv2
@@ -14,6 +23,7 @@ class CameraEvent(object):
     """An Event-like class that signals all active clients when a new frame is
     available.
     """
+
     def __init__(self):
         self.events = {}
 
@@ -56,6 +66,9 @@ class BaseCamera(object):
     thread = None  # background thread that reads frames from camera
     frame = None  # current frame is stored here by background thread
     last_access = 0  # time of last client access to the camera
+    frames_read = 0
+    started_at = 0
+
     event = CameraEvent()
 
     def __init__(self):
@@ -90,10 +103,12 @@ class BaseCamera(object):
     def _thread(cls):
         """Camera background thread."""
         print('Starting camera thread.')
+        BaseCamera.started_at = time.time()
         frames_iterator = cls.frames()
         for frame in frames_iterator:
             BaseCamera.frame = frame
             BaseCamera.event.set()  # send signal to clients
+            BaseCamera.frames_read += 1
             time.sleep(0)
 
             # if there hasn't been any clients asking for frames in

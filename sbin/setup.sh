@@ -1,3 +1,4 @@
+#!/bin/sh
 
 # This script is meant to be run on the bot.  The upload.sh script in
 # this directory will upload us and all of ./sbin to $TARGET_DIR
@@ -9,6 +10,14 @@ set -x
 
 TARGET_DIR="/home/pi/shelly-bot"
 TMP_DIR="/tmp/shelly-bot"
+
+##
+#
+# Added the below following the excellent Tom's Hardward
+# blog written by Caroline Dunn.  Thank you @carolinedunn!
+#
+# https://www.tomshardware.com/how-to/raspberry-pi-facial-recognition
+##
 
 sudo apt install -y cmake build-essential pkg-config git
 sudo apt install -y libjpeg-dev libtiff-dev libjasper-dev libpng-dev libwebp-dev libopenexr-dev
@@ -55,11 +64,35 @@ sudo systemctl restart dphys-swapfile
 
 sudo pip3 install face-recognition imutils
 
+##
+#
+# End of Caroline's setup
+#
+##
+
+
+###
+#
+#  Added for Adeept video streaming; see,
+#  base_camera.py, comaner_opencv.py + other code originally
+#  "sourced" :) from @adeept/Adeept_RaspTank.
+#
+#  Thank you @adeept!  ❤️ you!
+
+
 # I added these to accomodate adeept video streaming
 sudo apt-get install -y libjasper-dev
 sudo apt-get install -y libatlas-base-dev
 
-# Also for adeept
+# These are for the webserver (flask) and websocket server
 sudo pip3 install websockets flask flask_cors
+# I'm not sure why Caroline's cv2 setup didn't work for adeept.
+# I originally tried to leave this out
 sudo pip3 install opencv-contrib-python==3.4.3.18
+
 sudo pip3 install zmq pybase64 psutil
+
+
+##
+# End Adeept setup
+##
