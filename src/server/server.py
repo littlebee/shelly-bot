@@ -12,12 +12,15 @@
 import os
 import threading
 import time
+import psutil
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
 
+import cv2
 from camera_opencv import Camera
 from base_camera import BaseCamera
+from face_detect import FaceDetect
 
 # Raspberry Pi camera module (requires picamera package)
 # from camera_pi import Camera
@@ -26,14 +29,17 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 camera = Camera()
+face_detect = FaceDetect(camera)
 
 
 def gen(camera):
     """Video streaming generator function."""
     while True:
         frame = camera.get_frame()
+        frame = face_detect.augment_frame(frame)
+        jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
 
 
 @app.route('/video_feed')
@@ -49,13 +55,26 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 @app.route('/stats')
 def send_stats():
     now = time.time()
-    total_time = now - BaseCamera.started_at
-    frames_read = BaseCamera.frames_read
-    frames_read_per_second = frames_read / total_time
+    camera_total_time = now - BaseCamera.started_at
+    camera_frames_read = BaseCamera.frames_read
+    camera_fps = camera_frames_read / camera_total_time
+    face_detect_total_time = now - FaceDetect.started_at
+    face_detect_frames_read = FaceDetect.frames_read
+    face_detect_fps = face_detect_frames_read / face_detect_total_time
+
     return {
-        "framesRead": frames_read,
-        "totalTime": total_time,
-        "framesReadPerSecond": frames_read_per_second,
+        "cpuPercent": psutil.cpu_percent(),
+
+        "capture": {
+            "framesRead": camera_frames_read,
+            "totalTime": camera_total_time,
+            "fps": camera_fps,
+        },
+        "faceDetect": {
+            "framesRead": face_detect_frames_read,
+            "totalTime": face_detect_total_time,
+            "fps": face_detect_fps,
+        }
     }
 
 
