@@ -13,13 +13,19 @@ import threading
 import face_recognition
 import cv2
 
+from event import Event
+
 
 class FaceDetect:
     thread = None  # background thread that reads frames from camera
     camera = None
     faces = []
+    last_frame = []
     frames_read = 0
     started_at = 0
+    last_dimensions = {}
+
+    event = Event()
 
     def __init__(self, camera):
         if FaceDetect.thread is None:
@@ -30,13 +36,17 @@ class FaceDetect:
     def get_faces(self):
         return FaceDetect.faces
 
+    def get_next_faces(self):
+        FaceDetect.event.wait()
+        FaceDetect.event.clear()
+        return self.get_faces()
+
     def augment_frame(self, frame):
         # Display the results
         for top, right, bottom, left in FaceDetect.faces:
             # Draw a box around the face
             cv2.rectangle(frame, (left, top),
                           (right, bottom), (0, 0, 255), 2)
-
         return frame
 
     @classmethod
@@ -46,8 +56,13 @@ class FaceDetect:
 
         while True:
             # get frame, run face detection on it and update FaceDetect.faces
-            frame = FaceDetect.camera.get_frame()
-            FaceDetect.faces = face_recognition.face_locations(frame)
+            FaceDetect.last_frame = FaceDetect.camera.get_frame()
+            FaceDetect.faces = face_recognition.face_locations(
+                FaceDetect.last_frame)
             FaceDetect.frames_read += 1
+            FaceDetect.last_dimensions = FaceDetect.last_frame.shape
+
+            FaceDetect.event.set()  # send signal to clients
+
             print(f"Detected faces: {FaceDetect.faces}")
             time.sleep(0)

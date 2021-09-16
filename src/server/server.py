@@ -21,15 +21,15 @@ import cv2
 from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
-
-# Raspberry Pi camera module (requires picamera package)
-# from camera_pi import Camera
+from engangement import Engagement
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 camera = Camera()
 face_detect = FaceDetect(camera)
+# this starts a thread that engages with the huuuumans
+engagement = Engagement(face_detect)
 
 
 def gen(camera):
@@ -61,6 +61,9 @@ def send_stats():
     face_detect_total_time = now - FaceDetect.started_at
     face_detect_frames_read = FaceDetect.frames_read
     face_detect_fps = face_detect_frames_read / face_detect_total_time
+    engagement_total_time = now - Engagement.started_at
+    engagement_frames_read = Engagement.frames_read
+    engagement_fps = engagement_frames_read / engagement_total_time
 
     return {
         "cpuPercent": psutil.cpu_percent(),
@@ -71,10 +74,16 @@ def send_stats():
             "fps": camera_fps,
         },
         "faceDetect": {
+            "lastDimensions": face_detect.last_dimensions,
             "framesRead": face_detect_frames_read,
             "totalTime": face_detect_total_time,
             "fps": face_detect_fps,
-        }
+        },
+        "engagement": {
+            "framesRead": engagement_frames_read,
+            "totalTime": engagement_total_time,
+            "fps": engagement_fps,
+        },
     }
 
 

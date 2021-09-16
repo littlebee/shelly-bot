@@ -26,6 +26,7 @@ sudo apt install -y libgtk-3-dev libqtgui4 libqtwebkit4 libqt4-test python3-pyqt
 sudo apt install -y libatlas-base-dev liblapacke-dev gfortran
 sudo apt install -y libhdf5-dev libhdf5-103
 sudo apt install -y python3-dev python3-pip python3-numpy
+sudo apt install -y espeak
 
 
 # needs to temporarily increase the swap file to build / install opencv
@@ -62,7 +63,7 @@ sudo ldconfig
 sudo cp -f $TMP_DIR/dphys-swapfile /etc
 sudo systemctl restart dphys-swapfile
 
-sudo pip3 install face-recognition imutils
+sudo pip3 install face-recognition imutils webrtcvada
 
 ##
 #

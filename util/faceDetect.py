@@ -8,9 +8,10 @@ import time
 import picamera
 import argparse
 from picamera.array import PiRGBArray
+import numpy as np
 
-CAPTURE_WIDTH = 320
-CAPTURE_HEIGHT = 208
+CAPTURE_WIDTH = 640
+CAPTURE_HEIGHT = 480
 
 os.environ["DISPLAY"] = ":0.0"
 
@@ -38,11 +39,18 @@ print('(press ctrl+C to stop)')
 
 frameCount = 0
 startTime = time.time()
+last_dimensions = {}
 
 
 def process_frame(frameImage):
     global frameCount
+    global last_dimensions
+
     frameCount += 1
+    last_dimensions = {
+        "height": np.size(frameImage, 0),
+        "width": np.size(frameImage, 1)
+    }
 
     # Find all the faces in the current frame of video
     face_locations = face_recognition.face_locations(frameImage)
@@ -81,6 +89,7 @@ totalTime = time.time() - startTime
 cv2.destroyAllWindows()
 
 
+print(f"last_dimensions: {last_dimensions}")
 print(f"total time: {totalTime}")
 print(f"total frames: {frameCount}")
 print(f"FPS: {frameCount / totalTime}")

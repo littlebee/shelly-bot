@@ -16,6 +16,8 @@ TMP_DIR="/tmp/shelly-bot"
 
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR"
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data"
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/engagement"
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/faces"
 
 scp -r ./src $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR
