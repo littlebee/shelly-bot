@@ -12,14 +12,11 @@ set -x
 
 TARGET_DIR="/home/pi/shelly-bot"
 TARGET_HOST=$1
-TMP_DIR="/tmp/shelly-bot"
 
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR"
-ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data"
-ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/engagement"
-ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/faces"
 
 scp -r ./src $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin $TARGET_HOST:$TARGET_DIR
-scp -r ./dist $TARGET_HOST:$TARGET_DIR
+scp -r ./media $TARGET_HOST:$TARGET_DIR
+scp -r ./run.sh $TARGET_HOST:$TARGET_DIR

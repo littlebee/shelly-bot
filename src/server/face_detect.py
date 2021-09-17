@@ -28,10 +28,10 @@ class FaceDetect:
     event = Event()
 
     def __init__(self, camera):
+        FaceDetect.camera = camera
         if FaceDetect.thread is None:
             FaceDetect.thread = threading.Thread(target=self._thread)
             FaceDetect.thread.start()
-        FaceDetect.camera = camera
 
     def get_faces(self):
         return FaceDetect.faces

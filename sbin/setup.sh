@@ -97,3 +97,7 @@ sudo pip3 install zmq pybase64 psutil
 ##
 # End Adeept setup
 ##
+
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data"
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/engagement"
+ssh $TARGET_HOST "mkdir -p $TARGET_DIR/data/faces"
