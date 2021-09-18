@@ -37,6 +37,7 @@ def gen(camera):
     while True:
         frame = camera.get_frame()
         frame = face_detect.augment_frame(frame)
+        frame = engagement.augment_frame(frame)
         jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')

@@ -31,8 +31,12 @@ class Engagement:
     started_at = 0
     face_detect = None
     trainer = Trainer()
-    faces_saved = 0      # total saved since started
-    new_faces_saved = 0  # new faces saved for current new face engagement
+    # total saved since started
+    faces_saved = 0
+    # new faces saved for current new face engagement
+    new_faces_saved = 0
+    # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
+    last_known_faces = []
 
     def __init__(self, face_detect):
         Engagement.face_detect = face_detect
@@ -40,15 +44,23 @@ class Engagement:
             Engagement.thread = threading.Thread(target=self._thread)
             Engagement.thread.start()
 
+    def augment_frame(self, frame):
+        # Display the results
+        for known_face in Engagement.last_known_faces:
+            name = known_face["name"]
+            (top, right, bottom, left) = known_face["aabb"]
+            # Draw a box around the face
+            cv2.rectangle(frame, (left, top),
+                          (right, bottom), (0, 255, 255), 2)
+            y = top - 15 if top - 15 > 15 else top + 15
+            cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
+                        .8, (0, 255, 255), 2)
+        return frame
+
     @classmethod
     def _thread(cls):
         print('Starting engagement thread.')
         cls.started_at = time.time()
-
-        # TODO  - REMOVE ME
-        time.sleep(5)
-        cls.trainer.trigger_retrain()
-        return
 
         while True:
             faces = cls.face_detect.get_next_faces()
@@ -72,9 +84,10 @@ class Engagement:
 
         encodings = face_recognition.face_encodings(frame, faces)
         names = []
+        known_faces = []
 
         # attempt to match each face in the input image to our known encodings
-        for encoding in encodings:
+        for index, encoding in enumerate(encodings):
             matches = face_recognition.compare_faces(encodingData["encodings"],
                                                      encoding)
             # check to see if we have found a match
@@ -91,6 +104,13 @@ class Engagement:
 
                 # update the list of matched names
                 names.append(name)
+                known_faces.append({
+                    "name": name,
+                    "aabb": faces[index]
+                })
+
+        print(f"found known faces: {known_faces}")
+        cls.last_known_faces = known_faces
 
         return names
 
