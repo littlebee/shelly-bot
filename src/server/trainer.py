@@ -9,12 +9,8 @@ import time
 import threading
 import pickle
 
-import face_recognition
-import cv2
 from imutils import paths as imutils_paths
 import paths
-
-ENCODINGS_FILE_PATH = "data/encodings.pickle"
 
 
 class Trainer:
@@ -73,49 +69,23 @@ class Trainer:
 
     @classmethod
     def _load_encodings_from_file(cls):
-        Trainer.last_modified = os.path.getmtime(ENCODINGS_FILE_PATH)
+        Trainer.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
         new_encodings_data = pickle.loads(
-            open(ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
+            open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
 
         Trainer.times_read += 1
         Trainer.encodings_data = new_encodings_data
-        print(f"Trainer updated from {ENCODINGS_FILE_PATH}")
+        print(f"Trainer updated from {paths.ENCODINGS_FILE_PATH}")
 
     @classmethod
     def _retrain_model(cls):
-        imagePaths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
-
-        # initialize the list of known encodings and known names
-        knownEncodings = []
-        knownNames = []
-
-        # loop over the image paths
-        for (i, imagePath) in enumerate(imagePaths):
-            # extract the person name from the image path
-            print("trainer: processing image {}/{}".format(i + 1,
-                                                           len(imagePaths)))
-            name = imagePath.split(os.path.sep)[-2]
-
-            # images are already cropped to a single face
-            image = cv2.imread(imagePath)
-            # convert from BGR (OpenCV ordering) to RGB
-            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-            # compute the facial embedding for the face
-            encodings = face_recognition.face_encodings(rgb)
-
-            for encoding in encodings:
-                knownEncodings.append(encoding)
-                knownNames.append(name)
-
-        new_encodings_data = {"encodings": knownEncodings, "names": knownNames}
-
-        # save encodings data in pickle file for faster start up
-        f = open(ENCODINGS_FILE_PATH, "wb")
-        f.write(pickle.dumps(new_encodings_data))
-        f.close()
-
-        # this is a reference assignment and should be
-        # atomic.  when complete, the client(s) will
-        # get updated encodings data via get_encodings_data()
-        cls.encodings_data = new_encodings_data
+        # calling the retrain_model function directly from
+        # this thread and process caused a seg fault.
+        # I suspect that calling face_locations() and
+        # face_encodings() from face_recognition package
+        # are not thread safe.
+        #
+        # See comment on this commit:
+        # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
+        os.system('python3 src/server/retrain_model.py')
+        cls._load_encodings_from_file()
