@@ -12,11 +12,9 @@ Unless the above info gathering process is running, give shout outs to any
 new_faces that are recognized and identified from previous gathering + retraining .
 """
 import os
-from sys import path
 import time
 import threading
 import cv2
-from face_recognition.api import face_locations
 
 import paths
 import speech
@@ -27,6 +25,7 @@ from hearing import listen_for_name
 class Engagement:
     thread = None  # background thread that reads new_faces detected
     face_detect = None
+    run_event = threading.Event()
 
     # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
     # used to augment_frame
@@ -83,6 +82,14 @@ class Engagement:
         return frame
 
     @classmethod
+    def pause_engagement(cls):
+        cls.run_event.clear()
+
+    @classmethod
+    def resume_engagement(cls):
+        cls.run_event.set()
+
+    @classmethod
     def stats(cls):
         now = time.time()
         captureRate = 0
@@ -97,7 +104,8 @@ class Engagement:
             "capturesAttempted": cls.attempted_captures,
             "capturesSuccess": cls.actual_captures,
             "captureSuccessRate": captureRate,
-            "recognizedFaces": cls.recognized_faces
+            "recognizedFaces": cls.recognized_faces,
+            "status": cls.status
         }
 
     @classmethod
@@ -106,6 +114,11 @@ class Engagement:
         cls.started_at = time.time()
 
         while True:
+            if not cls.run_event.is_set():
+                cls.status = "engagement paused"
+                cls.last_known_faces = []
+                cls.run_event.wait()
+
             cls.status = "getting new faces"
             new_faces = cls.face_detect.get_faces()
             frame = cls.face_detect.last_frame

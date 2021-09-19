@@ -58,6 +58,17 @@ class FaceDetect:
         FaceDetect.pause_event.set()
 
     @classmethod
+    def stats(cls):
+        now = time.time()
+        total_time = now - cls.started_at
+        return {
+            "lastDimensions": cls.last_dimensions,
+            "framesRead": cls.frames_read,
+            "totalTime": total_time,
+            "fps": cls.frames_read / total_time,
+        }
+
+    @classmethod
     def _thread(cls):
         print('Starting face detection thread.')
         cls.started_at = time.time()

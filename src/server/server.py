@@ -11,7 +11,6 @@
 
 import os
 import threading
-import time
 import psutil
 
 from flask import Flask, Response, send_from_directory
@@ -22,7 +21,7 @@ from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
 from trainer import Trainer
-from engangement import Engagement
+from engagement import Engagement
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -58,31 +57,26 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 @app.route('/stats')
 def send_stats():
-    now = time.time()
-    camera_total_time = now - BaseCamera.started_at
-    camera_frames_read = BaseCamera.frames_read
-    camera_fps = camera_frames_read / camera_total_time
-    face_detect_total_time = now - FaceDetect.started_at
-    face_detect_frames_read = FaceDetect.frames_read
-    face_detect_fps = face_detect_frames_read / face_detect_total_time
-
     return {
         "cpuPercent": psutil.cpu_percent(),
 
-        "capture": {
-            "framesRead": camera_frames_read,
-            "totalTime": camera_total_time,
-            "fps": camera_fps,
-        },
-        "faceDetect": {
-            "lastDimensions": face_detect.last_dimensions,
-            "framesRead": face_detect_frames_read,
-            "totalTime": face_detect_total_time,
-            "fps": face_detect_fps,
-        },
+        "capture": BaseCamera.stats(),
+        "faceDetect": FaceDetect.stats(),
         "engagement": Engagement.stats(),
         "trainer": Trainer.stats()
     }
+
+
+@app.route('/pauseEngagement')
+def pause_engagement():
+    Engagement.pause_engagement()
+    return {"status": "paused"}
+
+
+@app.route('/resumeEngagement')
+def resume_engagement():
+    Engagement.resume_engagement()
+    return {"status": "resumed"}
 
 
 @app.route('/<path:filename>')
