@@ -1,5 +1,8 @@
 # /usr/bin/env python3
 import os
+from subprocess import run
+import time
+import json
 import pickle
 import face_recognition
 import cv2
@@ -9,21 +12,39 @@ import paths
 
 
 def retrain_model():
-    imagePaths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
+    image_paths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
 
-    # initialize the list of known encodings and known names
-    knownEncodings = []
-    knownNames = []
+    processed_paths = []
+    if os.path.exists(paths.TRAINER_PROCESSED_FILE_PATH):
+        with open(paths.TRAINER_PROCESSED_FILE_PATH, 'r') as file:
+            processed_paths = json.load(file)["directories"]
 
+    encodings_data = {
+        "encodings": [],
+        "names": []
+    }
+    if os.path.exists(paths.ENCODINGS_FILE_PATH):
+        encodings_data = pickle.loads(
+            open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
+
+    time_started = time.time()
+    images_already_processed = 0
+    new_images_processed = 0
     # loop over the image paths
-    for (i, imagePath) in enumerate(imagePaths):
+    for (i, image_path) in enumerate(image_paths):
+        if image_path in processed_paths:
+            images_already_processed += 1
+            # print(f"skipping already processed path {image_path}")
+            continue
+
+        new_images_processed += 1
+        processed_paths.append(image_path)
         # extract the person name from the image path
-        print("trainer: processing image {}/{}".format(i + 1,
-                                                       len(imagePaths)))
-        name = imagePath.split(os.path.sep)[-2]
+        print(f"retrain_model: processing image path {image_path}")
+        name = image_path.split(os.path.sep)[-2]
 
         # images are already cropped to a single face
-        image = cv2.imread(imagePath)
+        image = cv2.imread(image_path)
         # convert from BGR (OpenCV ordering) to RGB
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -31,14 +52,23 @@ def retrain_model():
         encodings = face_recognition.face_encodings(rgb)
 
         for encoding in encodings:
-            knownEncodings.append(encoding)
-            knownNames.append(name)
+            encodings_data["encodings"].append(encoding)
+            encodings_data["names"].append(name)
 
-    new_encodings_data = {"encodings": knownEncodings, "names": knownNames}
+    run_time = time.time() - time_started
+    fps = new_images_processed / run_time
+    print(
+        f"retrain_model: skipped {images_already_processed} images already in encodings")
+    print(
+        f"retrain_model: processed {new_images_processed} new images in {run_time}s.  ({fps})")
 
     # save encodings data in pickle file for faster start up
     f = open(paths.ENCODINGS_FILE_PATH, "wb")
-    f.write(pickle.dumps(new_encodings_data))
+    f.write(pickle.dumps(encodings_data))
+    f.close()
+
+    f = open(paths.TRAINER_PROCESSED_FILE_PATH, "w")
+    f.write(json.dumps({"directories": processed_paths}))
     f.close()
 
 

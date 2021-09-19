@@ -20,3 +20,4 @@ scp -r ./util $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin $TARGET_HOST:$TARGET_DIR
 scp -r ./media $TARGET_HOST:$TARGET_DIR
 scp -r ./run.sh $TARGET_HOST:$TARGET_DIR
+scp -r ./retrain.sh $TARGET_HOST:$TARGET_DIR
