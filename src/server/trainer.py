@@ -76,6 +76,7 @@ class Trainer:
         Trainer.times_read += 1
         Trainer.encodings_data = new_encodings_data
         print(f"Trainer updated from {paths.ENCODINGS_FILE_PATH}")
+        print(f"encodings data {Trainer.encodings_data}")
 
     @classmethod
     def _retrain_model(cls):

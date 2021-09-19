@@ -10,22 +10,24 @@ the video feed to stream at 30fps while face frames lag behind at 3fps (maybe up
 """
 import time
 import threading
-import face_recognition
 import cv2
 
+import faces
 from event import Event
 
 
 class FaceDetect:
     thread = None  # background thread that reads frames from camera
     camera = None
-    faces = []
+    last_faces = []
     last_frame = []
     frames_read = 0
     started_at = 0
     last_dimensions = {}
 
-    event = Event()
+    detected_event = Event()
+    # we don't need the one to many event, a simple event will do
+    pause_event = threading.Event()
 
     def __init__(self, camera):
         FaceDetect.camera = camera
@@ -34,35 +36,46 @@ class FaceDetect:
             FaceDetect.thread.start()
 
     def get_faces(self):
-        return FaceDetect.faces
+        return FaceDetect.last_faces
 
     def get_next_faces(self):
-        FaceDetect.event.wait()
-        FaceDetect.event.clear()
+        FaceDetect.detected_event.wait()
+        FaceDetect.detected_event.clear()
         return self.get_faces()
 
     def augment_frame(self, frame):
         # Display the results
-        for top, right, bottom, left in FaceDetect.faces:
+        for top, right, bottom, left in self.get_faces():
             # Draw a box around the face
             cv2.rectangle(frame, (left, top),
                           (right, bottom), (0, 0, 255), 2)
         return frame
 
+    def pause(self):
+        FaceDetect.pause_event.clear()
+
+    def resume(self):
+        FaceDetect.pause_event.set()
+
     @classmethod
     def _thread(cls):
         print('Starting face detection thread.')
-        FaceDetect.started_at = time.time()
+        cls.started_at = time.time()
+        cls.pause_event.set()
 
         while True:
-            # get frame, run face detection on it and update FaceDetect.faces
-            FaceDetect.last_frame = FaceDetect.camera.get_frame()
-            FaceDetect.faces = face_recognition.face_locations(
-                FaceDetect.last_frame)
-            FaceDetect.frames_read += 1
-            FaceDetect.last_dimensions = FaceDetect.last_frame.shape
+            # cls.pause_event.wait()
+            # get frame, run face detection on it and update FaceDetect.last_faces
+            cls.last_frame = cls.camera.get_frame().copy()
+            cls.last_faces = faces.face_locations(cls.last_frame)
+            cls.frames_read += 1
+            cls.last_dimensions = cls.last_frame.shape
 
-            FaceDetect.event.set()  # send signal to clients
+            # set the detected_event even if there are no faces so
+            # engagement can remove box augmentations
+            cls.detected_event.set()  # send signal to clients
 
-            print(f"Detected faces: {FaceDetect.faces}")
+            if len(cls.last_faces) > 0:
+                print(f"Detected faces: {cls.last_faces}")
+
             time.sleep(0)

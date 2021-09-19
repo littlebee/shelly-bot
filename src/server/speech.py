@@ -3,6 +3,8 @@
 This class provides methods for speaking to the humans.
 """
 import os
+import time
+import subprocess
 import random
 
 import paths
@@ -36,6 +38,19 @@ REJECTIONS = [
     "Ok, well see if I remember you.  not."
 ]
 
+MIN_SECONDS_BETWEEN_GREETINGS = 120
+
+
+def async_cmd(cmd):
+    subprocess.Popen(
+        [cmd],
+        shell=True,
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        close_fds=True
+    )
+
 
 def name_wav_file_path(name):
     return f"data/faces/{name}/name.wav"
@@ -50,7 +65,7 @@ def play_name(name):
 
 
 def play_camera_snap():
-    os.system(f"aplay media/sounds/camera_snap.wav")
+    async_cmd(f"aplay media/sounds/camera_snap.wav")
 
 
 def espeak_cmd(text):
@@ -61,20 +76,46 @@ def say(text):
     os.system(espeak_cmd(text))
 
 
-def say_random_from(collection):
-    intro = collection[random.randrange(
+def say_async(text):
+    async_cmd(espeak_cmd(text))
+
+
+def say_random_from(collection, runAsync=False):
+    msg = collection[random.randrange(
         len(collection))]
-    say(intro)
+    if runAsync:
+        say_async(msg)
+    else:
+        say(msg)
 
 
-def say_hello(name):
+# kv of "name": timeLastGreeted
+_lastTimeGreeted = {}
+
+
+def say_hello(names):
     greeting = GREETINGS[random.randrange(
         len(GREETINGS))]
 
+    names_to_greet = []
+    for name in names:
+        if name in _lastTimeGreeted and \
+           time.time() - _lastTimeGreeted[name] < MIN_SECONDS_BETWEEN_GREETINGS:
+            continue
+        elif name not in names_to_greet:
+            names_to_greet.append(name)
+
+    if len(names_to_greet) == 0:
+        return
+
     say(greeting[0])
-    play_name(name)
+
+    for name in names_to_greet:
+        play_name(name)
+        _lastTimeGreeted[name] = time.time()
+
     say(greeting[1])
-    print(f"greeted {name}")
+    print(f"greeted {names_to_greet}")
 
 
 def introduce_yourself():
@@ -94,7 +135,7 @@ def where_did_you_go():
 
 
 def pose_for_me():
-    say_random_from(POSES)
+    say_random_from(POSES, runAsync=True)
 
 
 def and_im_spent():

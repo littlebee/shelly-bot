@@ -36,6 +36,7 @@ def gen(camera):
     """Video streaming generator function."""
     while True:
         frame = camera.get_frame()
+        frame = frame.copy()
         frame = face_detect.augment_frame(frame)
         frame = engagement.augment_frame(frame)
         jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
@@ -62,9 +63,6 @@ def send_stats():
     face_detect_total_time = now - FaceDetect.started_at
     face_detect_frames_read = FaceDetect.frames_read
     face_detect_fps = face_detect_frames_read / face_detect_total_time
-    engagement_total_time = now - Engagement.started_at
-    engagement_frames_read = Engagement.frames_read
-    engagement_fps = engagement_frames_read / engagement_total_time
 
     return {
         "cpuPercent": psutil.cpu_percent(),
@@ -80,11 +78,7 @@ def send_stats():
             "totalTime": face_detect_total_time,
             "fps": face_detect_fps,
         },
-        "engagement": {
-            "framesRead": engagement_frames_read,
-            "totalTime": engagement_total_time,
-            "fps": engagement_fps,
-        },
+        "engagement": Engagement.stats(),
     }
 
 
