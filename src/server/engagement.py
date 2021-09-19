@@ -169,8 +169,9 @@ class Engagement:
                     "name": name,
                     "aabb": new_faces[index]
                 })
-                cls.status = "greeting"
-                speech.say_hello(names)
+                if not cls.status == "engaging":
+                    cls.status = "greeting"
+                    speech.say_hello(names)
 
         cls.face_detect.resume()
         print(f"found known faces: {names}")
