@@ -21,6 +21,7 @@ import cv2
 from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
+from trainer import Trainer
 from engangement import Engagement
 
 app = Flask(__name__)
@@ -28,8 +29,9 @@ CORS(app, supports_credentials=True)
 
 camera = Camera()
 face_detect = FaceDetect(camera)
+trainer = Trainer()
 # this starts a thread that engages with the huuuumans
-engagement = Engagement(face_detect)
+engagement = Engagement(face_detect, trainer)
 
 
 def gen(camera):
@@ -79,6 +81,7 @@ def send_stats():
             "fps": face_detect_fps,
         },
         "engagement": Engagement.stats(),
+        "trainer": Trainer.stats()
     }
 
 

@@ -24,6 +24,10 @@ class Trainer:
     # used to prompt the trainer thread to run _retrain_model()
     retrain_needed_event = threading.Event()
 
+    # used by stats()
+    # time it took to run retrain_model.py in seconds
+    last_retrain_time = 0
+
     def __init__(self):
         if Trainer.thread is None:
             Trainer.thread = threading.Thread(target=self._thread)
@@ -31,6 +35,7 @@ class Trainer:
 
     # Returns the last encoding data without waiting for any
     # retraining in progress
+
     def get_encodings_data(self):
         return Trainer.encodings_data
 
@@ -51,6 +56,12 @@ class Trainer:
     # will self correct on the next iteration of retrain_model()
     def trigger_retrain(self):
         Trainer.retrain_needed_event.set()
+
+    @classmethod
+    def stats(cls):
+        return {
+            "lastRetrainTime": cls.last_retrain_time
+        }
 
     @classmethod
     def _thread(cls):
@@ -76,10 +87,11 @@ class Trainer:
         Trainer.times_read += 1
         Trainer.encodings_data = new_encodings_data
         print(f"Trainer updated from {paths.ENCODINGS_FILE_PATH}")
-        print(f"encodings data {Trainer.encodings_data}")
+        # print(f"encodings data {Trainer.encodings_data}")
 
     @classmethod
     def _retrain_model(cls):
+        time_started = time.time()
         # calling the retrain_model function directly from
         # this thread and process caused a seg fault.
         # I suspect that calling face_locations() and
@@ -90,3 +102,4 @@ class Trainer:
         # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
         os.system('python3 src/server/retrain_model.py')
         cls._load_encodings_from_file()
+        cls.last_retrain_time = time.time() - time_started

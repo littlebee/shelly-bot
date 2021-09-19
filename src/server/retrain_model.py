@@ -1,6 +1,5 @@
 # /usr/bin/env python3
 import os
-from subprocess import run
 import time
 import json
 import pickle
@@ -43,17 +42,18 @@ def retrain_model():
         print(f"retrain_model: processing image path {image_path}")
         name = image_path.split(os.path.sep)[-2]
 
-        # images are already cropped to a single face
         image = cv2.imread(image_path)
-        # convert from BGR (OpenCV ordering) to RGB
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(image)
+        if len(face_locations) == 1:
+            # convert from BGR (OpenCV ordering) to RGB
+            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # compute the facial embedding for the face
-        encodings = face_recognition.face_encodings(rgb)
+            # compute the facial embedding for the face
+            encodings = face_recognition.face_encodings(rgb)
 
-        for encoding in encodings:
-            encodings_data["encodings"].append(encoding)
-            encodings_data["names"].append(name)
+            for encoding in encodings:
+                encodings_data["encodings"].append(encoding)
+                encodings_data["names"].append(name)
 
     run_time = time.time() - time_started
     fps = new_images_processed / run_time

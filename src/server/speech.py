@@ -13,10 +13,11 @@ ESPEAK_CMD = "espeak -v en+f2"
 
 GREETINGS = [
     ["Hello", None],
-    ["Yo!", "what up, G?"],
-    ["Hi", None],
-    ["What are you doing", None],
-    [None, ", my huuman.  What up?"]
+    ["Yo!", "what up, gee?"],
+    ["Hi", None, "good to see you"],
+    ["What are you doing, ", None],
+    [None, ", my huuman.  What up?"],
+    ["Yo, ", "...looking good, darling."]
 ]
 INTRODUCTIONS = [
     "Oh, hello.  What is your name?",
@@ -29,7 +30,9 @@ POSES = [
     "Yaaaas, the camera loves you darling, make love to the camera",
     "You're a tiger. You're a lemur; cute and cuddly with sharp fierce claws",
     "You're happy.  You're sad.  You couldn't give a rats ass.",
-    "Make love to my cold electronic eye.  Yaaaassss."
+    "Make love to my cold electronic eye.  Yaaaassss.",
+    "Strike a pose, let's get down to it.",
+    "Give me fierce, yaaaas.  You are ferocious."
 ]
 
 REJECTIONS = [
@@ -139,7 +142,7 @@ def pose_for_me():
 
 
 def and_im_spent():
-    say("...and I'm spent.")
+    say_async("...and I'm spent.")
 
 
 def nice_to_meet_you(name):

@@ -21,14 +21,12 @@ from face_recognition.api import face_locations
 import paths
 import speech
 import faces
-from trainer import Trainer
 from hearing import listen_for_name
 
 
 class Engagement:
     thread = None  # background thread that reads new_faces detected
     face_detect = None
-    trainer = Trainer()
 
     # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
     # used to augment_frame
@@ -53,8 +51,9 @@ class Engagement:
     # number of recognized new_faces
     recognized_faces = 0
 
-    def __init__(self, face_detect):
+    def __init__(self, face_detect, trainer):
         Engagement.face_detect = face_detect
+        Engagement.trainer = trainer
         if Engagement.thread is None:
             Engagement.thread = threading.Thread(target=self._thread)
             Engagement.thread.start()
@@ -192,6 +191,7 @@ class Engagement:
                     speech.rejection()
                     return
 
+        speech.and_im_spent()
         name = cls.create_face_files()
         speech.nice_to_meet_you(name)
 
