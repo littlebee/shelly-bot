@@ -13,10 +13,10 @@ ESPEAK_CMD = "espeak -v en+f2"
 
 GREETINGS = [
     ["Hello", None],
-    ["Yo!", "what up, gee?"],
-    ["Hi", None, "good to see you"],
+    ["Yo!", "what up?"],
+    ["Hi", "good to see you"],
     ["What are you doing, ", None],
-    [None, ", my huuman.  What up?"],
+    [None, "...my huuman.  What up?"],
     ["Yo, ", "...looking good, darling."]
 ]
 INTRODUCTIONS = [
@@ -26,13 +26,16 @@ INTRODUCTIONS = [
 ]
 
 POSES = [
-    "Pose for me.  Let me behold your beauty.  You are fierce."
-    "Yaaaas, the camera loves you darling, make love to the camera",
-    "You're a tiger. You're a lemur; cute and cuddly with sharp fierce claws",
+    "Pose for me.  Let me behold your beauty.",
+    "You are fierce.",
+    "Yaaaas, the camera loves you darling.",
+    "Make love to the camera.",
+    "You're a tiger. Yaaaas."
+    "You're a lemur; cute and cuddly with sharp fierce claws",
     "You're happy.  You're sad.  You couldn't give a rats ass.",
     "Make love to my cold electronic eye.  Yaaaassss.",
     "Strike a pose, let's get down to it.",
-    "Give me fierce, yaaaas.  You are ferocious."
+    "Give me fierce, yaaaas."
 ]
 
 REJECTIONS = [
@@ -111,13 +114,16 @@ def say_hello(names):
     if len(names_to_greet) == 0:
         return
 
-    say(greeting[0])
+    if greeting[0]:
+        say(greeting[0])
 
     for name in names_to_greet:
         play_name(name)
         _lastTimeGreeted[name] = time.time()
 
-    say(greeting[1])
+    if greeting[1]:
+        say(greeting[1])
+
     print(f"greeted {names_to_greet}")
 
 
@@ -138,7 +144,7 @@ def where_did_you_go():
 
 
 def pose_for_me():
-    say_random_from(POSES, runAsync=True)
+    say_random_from(POSES)
 
 
 def and_im_spent():

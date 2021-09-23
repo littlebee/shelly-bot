@@ -30,7 +30,7 @@ camera = Camera()
 face_detect = FaceDetect(camera)
 trainer = Trainer()
 # this starts a thread that engages with the huuuumans
-engagement = Engagement(face_detect, trainer)
+engagement = Engagement(camera, face_detect, trainer)
 
 
 def gen(camera):

@@ -12,7 +12,7 @@ import paths
 
 def retrain_model():
     image_paths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
-
+    image_paths.sort()
     processed_paths = []
     if os.path.exists(paths.TRAINER_PROCESSED_FILE_PATH):
         with open(paths.TRAINER_PROCESSED_FILE_PATH, 'r') as file:
@@ -45,6 +45,8 @@ def retrain_model():
         image = cv2.imread(image_path)
         face_locations = face_recognition.face_locations(image)
         if len(face_locations) == 1:
+            top, right, bottom, left = face_locations[0]
+            image = image[top:bottom, left:right]
             # convert from BGR (OpenCV ordering) to RGB
             rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -60,7 +62,7 @@ def retrain_model():
     print(
         f"retrain_model: skipped {images_already_processed} images already in encodings")
     print(
-        f"retrain_model: processed {new_images_processed} new images in {run_time}s.  ({fps})")
+        f"retrain_model: processed {new_images_processed} new images in {run_time}s.  ({fps} fps)")
 
     # save encodings data in pickle file for faster start up
     f = open(paths.ENCODINGS_FILE_PATH, "wb")

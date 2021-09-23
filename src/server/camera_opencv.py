@@ -35,6 +35,9 @@ class Camera(BaseCamera):
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
 
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
         while True:
             _, img = camera.read()
             if img is None:

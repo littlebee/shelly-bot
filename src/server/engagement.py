@@ -19,12 +19,18 @@ import cv2
 import paths
 import speech
 import faces
+
 from hearing import listen_for_name
+from sensors import camera_distance
+
+# in meters
+MAX_CAMERA_DISTANCE_TO_ENGAGE = 1.2
 
 
 class Engagement:
     thread = None  # background thread that reads new_faces detected
     face_detect = None
+    camera = None
     run_event = threading.Event()
 
     # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
@@ -50,7 +56,8 @@ class Engagement:
     # number of recognized new_faces
     recognized_faces = 0
 
-    def __init__(self, face_detect, trainer):
+    def __init__(self, camera, face_detect, trainer):
+        Engagement.camera = camera
         Engagement.face_detect = face_detect
         Engagement.trainer = trainer
         if Engagement.thread is None:
@@ -78,6 +85,9 @@ class Engagement:
                             .6, color, 2)
 
             cv2.putText(frame, status, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        .8, color, 2)
+
+            cv2.putText(frame, str(camera_distance()), (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
                         .8, color, 2)
         return frame
 
@@ -119,21 +129,23 @@ class Engagement:
                 cls.last_known_faces = []
                 cls.run_event.wait()
 
-            cls.status = "getting new faces"
+            cls.status = "detecting new faces"
             new_faces = cls.face_detect.get_faces()
+            num_new_faces = len(new_faces)
             frame = cls.face_detect.last_frame
-            cls.status = "getting names for faces"
-            names = cls.get_names_for_faces(new_faces, frame)
-            cls.status = "analyzing"
-            num_names = len(names)
-            if len(new_faces) == 1 and num_names == 0:
-                cls.engagement_face = new_faces[0]
-                cls.status = "engaging"
-                cls.engage_new_face(new_faces[0], frame)
-            elif num_names > 0:
-                cls.recognized_faces += num_names
+            if num_new_faces > 0:
+                cls.status = "getting names for faces"
+                names = cls.get_names_for_faces(new_faces, frame)
+                cls.status = "analyzing"
+                num_names = len(names)
+                single_unknown = num_new_faces == 1 and num_names == 0
+                if single_unknown and camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE:
+                    cls.engagement_face = new_faces[0]
+                    cls.status = "engaging"
+                    cls.engage_new_face(new_faces[0], frame)
+                elif num_names > 0:
+                    cls.recognized_faces += num_names
 
-            cls.status = "resting"
             time.sleep(0.1)
 
     @classmethod
@@ -141,7 +153,6 @@ class Engagement:
         # get frame, run face detection on it and update Engagement.face
         encodingData = cls.trainer.get_encodings_data()
 
-        cls.face_detect.pause()
         encodings = faces.face_encodings(frame, new_faces)
         names = []
         cls.last_known_faces = []
@@ -149,7 +160,6 @@ class Engagement:
         # attempt to match each face in the input image to our known encodings
         for index, encoding in enumerate(encodings):
             matches = faces.compare_faces(encodingData["encodings"], encoding)
-            cls.face_detect.resume()
 
             # check to see if we have found a match
             if True in matches:
@@ -194,16 +204,17 @@ class Engagement:
 
         speech.let_me_get_a_look_at_you()
 
-        for i in range(0, 6):
-            print(f"capturing images. round {i}")
-            speech.pose_for_me()
-            num_saved = cls.save_five_faces()
-            if num_saved == 0:
+        for i in range(0, 3):
+            if not cls.is_still_unknown_face():
                 speech.where_did_you_go()
-                num_saved = cls.save_five_faces()
-                if num_saved == 0:
+                if not cls.is_still_unknown_face():
                     speech.rejection()
                     return
+
+            print(f"capturing images. round {i}")
+            speech.pose_for_me()
+            speech.play_camera_snap()
+            cls.save_frames(20)
 
         speech.and_im_spent()
         name = cls.create_face_files()
@@ -214,36 +225,24 @@ class Engagement:
         time.sleep(20)
 
     @ classmethod
-    def save_five_faces(cls):
-        print(f"attempting to save 5 face shots...")
-        actual_saves = 0
-        for i in range(0, 4):
+    def save_frames(cls, num_frames):
+        print(f"attempting to save {num_frames} frames...")
+        for i in range(0, num_frames):
+            frame = cls.camera.get_frame()
             cls.attempted_captures += 1
-            new_faces = cls.face_detect.get_next_faces()
-            frame = cls.face_detect.last_frame
-            speech.play_camera_snap()
-            if len(new_faces) == 1:
-                cls.engagement_face = new_faces[0]
-                names = cls.get_names_for_faces(new_faces, frame)
-                # we need a single unrecognized face
-                if len(names) == 0:
-                    actual_saves += 1
-                    cls.actual_captures += 1
-                    cls.save_face_in_frame(new_faces[0], frame)
-                else:
-                    print(
-                        f"face {i} not saved: expected unknown face, got ({names}). ignoring.")
-            else:
-                print(
-                    f"face {i} not saved: expected 1 face, got {len(new_faces)}. ignoring.")
-
-        return actual_saves
+            cls.actual_captures += 1
+            cls.save_image(frame)
+            time.sleep(.1)
 
     @ classmethod
     def save_face_in_frame(cls, face, frame):
-        path = f"{paths.TMP_DATA_DIR}/frame_{cls.new_frames_saved}.jpg"
         top, right, bottom, left = face
         image = frame[top:bottom, left:right]
+        cls.save_image(image)
+
+    @classmethod
+    def save_image(cls, image):
+        path = f"{paths.TMP_DATA_DIR}/frame_{cls.new_frames_saved}.jpg"
         cv2.imwrite(path, image)
         print(f"saved face {path}")
 
@@ -262,3 +261,17 @@ class Engagement:
         cls.faces_saved += 1
 
         return new_face_name
+
+    @classmethod
+    def is_still_unknown_face(cls):
+        new_faces = cls.face_detect.get_next_faces()
+        frame = cls.face_detect.last_frame
+        speech.play_camera_snap()
+        if len(new_faces) == 1:
+            cls.engagement_face = new_faces[0]
+            names = cls.get_names_for_faces(new_faces, frame)
+            # we need a single unrecognized face
+            if len(names) == 0:
+                return camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE
+
+        return False
