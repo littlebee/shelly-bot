@@ -8,9 +8,11 @@ import os
 import time
 import threading
 import pickle
+import json
+import numpy
 
 from imutils import paths as imutils_paths
-import paths
+import commons.paths as paths
 
 
 class Trainer:
@@ -21,12 +23,16 @@ class Trainer:
     # get_encodings_data() before the pickle finishes loading
     # on startup
     encodings_data = {"encodings": [], "names": []}
+
+    # these get saved and restored to data/faces_process.json
+    processed_paths = set()
+
     # used to prompt the trainer thread to run _retrain_model()
     retrain_needed_event = threading.Event()
 
     # used by stats()
     # time it took to run retrain_model.py in seconds
-    last_retrain_time = 0
+    last_retrain_duration = 0
 
     def __init__(self):
         if Trainer.thread is None:
@@ -60,7 +66,7 @@ class Trainer:
     @classmethod
     def stats(cls):
         return {
-            "lastRetrainTime": cls.last_retrain_time
+            "lastRetrainTime": cls.last_retrain_duration
         }
 
     @classmethod
@@ -70,7 +76,8 @@ class Trainer:
 
         # In case a retrain request comes in while loading...
         Trainer.retrain_needed_event.clear()
-        Trainer._load_encodings_from_file()
+        cls._load_encodings_from_file()
+        cls._load_processed_paths_from_file()
 
         while True:
             cls.retrain_needed_event.wait()
@@ -80,26 +87,31 @@ class Trainer:
 
     @classmethod
     def _load_encodings_from_file(cls):
-        Trainer.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
+        cls.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
         new_encodings_data = pickle.loads(
             open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
 
         Trainer.times_read += 1
-        Trainer.encodings_data = new_encodings_data
+        cls.encodings_data = new_encodings_data
         print(f"Trainer updated from {paths.ENCODINGS_FILE_PATH}")
-        # print(f"encodings data {Trainer.encodings_data}")
+        # print(f"encodings data {cls.encodings_data}")
+
+    @classmethod
+    def _load_processed_paths_from_file(cls):
+        if os.path.exists(paths.TRAINER_PROCESSED_FILE_PATH):
+            with open(paths.TRAINER_PROCESSED_FILE_PATH, 'r') as file:
+                cls.processed_paths = json.load(file)["paths"]
 
     @classmethod
     def _retrain_model(cls):
         time_started = time.time()
-        # calling the retrain_model function directly from
-        # this thread and process caused a seg fault.
-        # I suspect that calling face_locations() and
-        # face_encodings() from face_recognition package
-        # are not thread safe.
-        #
-        # See comment on this commit:
-        # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
-        os.system('python3 src/server/retrain_model.py')
-        cls._load_encodings_from_file()
-        cls.last_retrain_time = time.time() - time_started
+
+        unprocessed_paths = cls._get_unprocessed_paths()
+        chunks = numpy.array_split(unprocessed_paths, 4)
+        print(f"got chunks {chunks}")
+        cls.last_retrain_duration = time.time() - time_started
+
+    @classmethod
+    def _get_unprocessed_paths(cls):
+        image_paths = set(imutils_paths.list_images(paths.FACES_DATA_DIR))
+        return list(image_paths - set(cls.processed_paths)).sort()

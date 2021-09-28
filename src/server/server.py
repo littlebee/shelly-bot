@@ -79,6 +79,10 @@ def resume_engagement():
     return {"status": "resumed"}
 
 
+@app.rount('/retrain')
+def retrain():
+
+
 @app.route('/<path:filename>')
 def sendgen(filename):
     return send_from_directory(dir_path, filename)

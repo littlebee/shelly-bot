@@ -3,11 +3,20 @@ import os
 import time
 import json
 import pickle
-import face_recognition
 import cv2
 from imutils import paths as imutils_paths
 
-import paths
+import commons.paths as paths
+import commons.faces as faces
+
+last_modified = 0
+times_read = 0
+
+# default initial encodings data in case a client calls
+# get_encodings_data() before the pickle finishes loading
+# on startup
+encodings_data = {"encodings": [], "names": []}
+
 
 
 def retrain_model():
@@ -43,7 +52,7 @@ def retrain_model():
         name = image_path.split(os.path.sep)[-2]
 
         image = cv2.imread(image_path)
-        face_locations = face_recognition.face_locations(image)
+        face_locations = faces.face_locations(image)
         if len(face_locations) == 1:
             top, right, bottom, left = face_locations[0]
             image = image[top:bottom, left:right]
@@ -51,7 +60,7 @@ def retrain_model():
             rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
             # compute the facial embedding for the face
-            encodings = face_recognition.face_encodings(rgb)
+            encodings = faces.face_encodings(rgb, face_locations)
 
             for encoding in encodings:
                 encodings_data["encodings"].append(encoding)
@@ -75,4 +84,5 @@ def retrain_model():
 
 
 if __name__ == '__main__':
+    load_encodings_from_file()
     retrain_model()

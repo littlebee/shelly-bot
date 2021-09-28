@@ -1,6 +1,6 @@
 import os
 
-import paths
+import commons.paths as paths
 
 # 3 seconds of audio at sample rate of 16000 equals about 96k
 # after removing silence, wav file must be at least 15K to be valid

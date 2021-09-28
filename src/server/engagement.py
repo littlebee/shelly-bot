@@ -16,9 +16,9 @@ import time
 import threading
 import cv2
 
-import paths
+import commons.paths as paths
+import commons.faces as faces
 import speech
-import faces
 
 from hearing import listen_for_name
 from sensors import camera_distance

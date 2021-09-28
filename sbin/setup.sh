@@ -63,7 +63,10 @@ sudo ldconfig
 sudo cp -f $TMP_DIR/dphys-swapfile /etc
 sudo systemctl restart dphys-swapfile
 
-sudo pip3 install face-recognition imutils webrtcvada
+sudo pip3 install \
+  face-recognition \
+  imutils \
+  webrtcvada
 
 ##
 #
@@ -89,9 +92,12 @@ sudo apt-get install -y libatlas-base-dev
 sudo pip3 install websockets flask flask_cors
 # I'm not sure why Caroline's cv2 setup didn't work for adeept.
 # I originally tried to leave this out
-sudo pip3 install opencv-contrib-python==3.4.3.18
-
-sudo pip3 install zmq pybase64 psutil
+sudo pip3 install \
+  opencv-contrib-python==3.4.3.18 \
+  pybase64 \
+  psutil \
+  websocket-client \
+  zmq \
 
 
 ##

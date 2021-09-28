@@ -7,7 +7,7 @@ import time
 import subprocess
 import random
 
-import paths
+import commons.paths as paths
 
 ESPEAK_CMD = "espeak -v en+f2"
 

@@ -8,3 +8,8 @@ FACES_DATA_DIR = "data/faces"
 
 ENCODINGS_FILE_PATH = "data/encodings.pickle"
 TRAINER_PROCESSED_FILE_PATH = "data/faces_processed.json"
+
+WEB_SERVER_PORT = 5000
+TRAINER_SERVICE_PORT = 5001
+TRAINER_HOST = "localhost"
+TRAINER_URL = f"ws://{TRAINER_HOST}:{TRAINER_SERVICE_PORT}"
