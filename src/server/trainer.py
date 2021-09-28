@@ -5,6 +5,7 @@ process and loads the new encodings.
 
 """
 import os
+import sys
 import time
 import threading
 import pickle
@@ -26,7 +27,9 @@ class Trainer:
 
     # used by stats()
     # time it took to run retrain_model.py in seconds
-    last_retrain_time = 0
+    last_retrain_duration = 0
+    # time it took to load the encodings from the pickle
+    last_load_duration = 0
 
     def __init__(self):
         if Trainer.thread is None:
@@ -60,7 +63,8 @@ class Trainer:
     @classmethod
     def stats(cls):
         return {
-            "lastRetrainTime": cls.last_retrain_time
+            "lastRetrainDuration": cls.last_retrain_duration,
+            "lastLoadDuration": cls.last_load_duration
         }
 
     @classmethod
@@ -80,14 +84,24 @@ class Trainer:
 
     @classmethod
     def _load_encodings_from_file(cls):
-        Trainer.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
+        time_started = time.time()
+        cls.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
         new_encodings_data = pickle.loads(
             open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
 
-        Trainer.times_read += 1
-        Trainer.encodings_data = new_encodings_data
-        print(f"Trainer updated from {paths.ENCODINGS_FILE_PATH}")
-        # print(f"encodings data {Trainer.encodings_data}")
+        cls.times_read += 1
+        cls.encodings_data = new_encodings_data
+        cls.last_load_duration = time.time() - time_started
+
+        print(
+            f"Trainer updated from {paths.ENCODINGS_FILE_PATH} in {cls.last_load_duration}s")
+
+        print(
+            f"encodings data length: {len(new_encodings_data['encodings'])}")
+        print(
+            f"encodings data length ea: {len(new_encodings_data['encodings'][0])}")
+        print(
+            f"encodings data size ea: {sys.getsizeof(new_encodings_data['encodings'][0][0])}")
 
     @classmethod
     def _retrain_model(cls):
@@ -101,5 +115,5 @@ class Trainer:
         # See comment on this commit:
         # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
         os.system('python3 src/server/retrain_model.py')
+        cls.last_retrain_duration = time.time() - time_started
         cls._load_encodings_from_file()
-        cls.last_retrain_time = time.time() - time_started
