@@ -17,13 +17,15 @@ import busio
 import adafruit_ads1x15.ads1015 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
+
 class AdcChannel():
     """Corresponds to ONE CHANNEL of the Snake Eye Bonnet's ADS1015
        analog-to-digital converter. Provides clipping, optional inversion
        and noise filtering. Output range ('value' element) is always in
        range 0.0 to 1.0."""
+
     def __init__(self, channel):
-        self.channel = channel # AnalogIn P0-P3
+        self.channel = channel  # AnalogIn P0-P3
         self.enabled = False   # Disabled by default (until config() called)
         self.min_v = 0.0       # Min expected input voltage
         self.max_v = 3.3       # Max expected input voltage
@@ -71,6 +73,7 @@ class AdcChannel():
                           scaled * (1.0 - self.filter))
         return self.value
 
+
 class SnakeEyesBonnet(Thread):
     """SnakeEyesBonnet encapsulates various analog-to-digital converter
        functionality of the Adafruit Snake Eyes Bonnet, providing up to
@@ -86,12 +89,12 @@ class SnakeEyesBonnet(Thread):
 
     def __init__(self, *args, **kwargs):
         """SnakeEyesBonnet constructor."""
-        super(SnakeEyesBonnet, self).__init__(*args, **kwargs) # Thread
+        super(SnakeEyesBonnet, self).__init__(*args, **kwargs)  # Thread
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.ads = ADS.ADS1015(self.i2c)
         self.ads.gain = 1
         self.period = 1.0 / 60.0  # Polling inverval = 1/60 sec default
-        self.print_values = False # Don't print values by default
+        self.print_values = False  # Don't print values by default
         self.channel = []
         for index in range(4):
             self.channel.append(AdcChannel(
