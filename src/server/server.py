@@ -58,12 +58,15 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 @app.route('/stats')
 def send_stats():
     return {
-        "cpuPercent": psutil.cpu_percent(),
-
         "capture": BaseCamera.stats(),
-        "faceDetect": FaceDetect.stats(),
         "engagement": Engagement.stats(),
+        "faceDetect": FaceDetect.stats(),
+        "system": {
+            "cpuPercent": psutil.cpu_percent(),
+            "ram": psutil.virtual_memory()[2],
+        },
         "trainer": Trainer.stats()
+
     }
 
 
