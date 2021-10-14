@@ -18,8 +18,6 @@ except ImportError:
     except ImportError:
         from _thread import get_ident
 
-from event import Event
-
 # last n seconds to use for fps calc
 FPS_WINDOW = 60
 
@@ -34,8 +32,6 @@ class BaseCamera(object):
     fps_frames_read = 0
     fps_started_at = 0
     last_fps = 0
-
-    event = Event()
 
     def __init__(self):
         """Start the background camera thread if it isn't running yet."""
@@ -53,10 +49,6 @@ class BaseCamera(object):
     def get_frame(self):
         """Return the current camera frame."""
         BaseCamera.last_access = time.time()
-
-        # wait for a signal from the camera thread
-        BaseCamera.event.wait()
-        BaseCamera.event.clear()
 
         return BaseCamera.frame
 
@@ -88,7 +80,6 @@ class BaseCamera(object):
 
         for frame in frames_iterator:
             BaseCamera.frame = frame
-            BaseCamera.event.set()  # send signal to clients
             BaseCamera.frames_read += 1
 
             BaseCamera.fps_frames_read += 1

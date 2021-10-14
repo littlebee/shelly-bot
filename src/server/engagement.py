@@ -22,16 +22,25 @@ import faces
 
 from hearing import listen_for_name
 from sensors import camera_distance
+from heart import Heart
 
 # in meters
-MAX_CAMERA_DISTANCE_TO_ENGAGE = 1.2
+MAX_CAMERA_DISTANCE_TO_ENGAGE = 1
+
+# how long heart stays red after recognizing a face
+HEART_RECOGNIZE_DURATION = 5
+# how long before heart turns blue from inactive
+HEART_ACTIVE_DURATION = 120
 
 
 class Engagement:
     thread = None  # background thread that reads new_faces detected
     face_detect = None
     camera = None
+    head = None
     run_event = threading.Event()
+    # always lead with your heart :)
+    heart = Heart()
 
     # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
     # used to augment_frame
@@ -55,11 +64,15 @@ class Engagement:
     actual_captures = 0
     # number of recognized new_faces
     recognized_faces = 0
+    # start off as if we just saw an unrecognized face (pink heart)
+    last_recognized_at = 0
+    last_face_at = time.time()
 
-    def __init__(self, camera, face_detect, trainer):
+    def __init__(self, camera, face_detect, trainer, head):
         Engagement.camera = camera
         Engagement.face_detect = face_detect
         Engagement.trainer = trainer
+        Engagement.head = head
         if Engagement.thread is None:
             Engagement.thread = threading.Thread(target=self._thread)
             Engagement.thread.start()
@@ -87,19 +100,20 @@ class Engagement:
             cv2.putText(frame, status, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
                         .8, color, 2)
 
-            cv2.putText(frame, str(camera_distance()), (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
+            rng_text = f"rng: {str(camera_distance())}m"
+            cv2.putText(frame, rng_text, (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
                         .8, color, 2)
         return frame
 
-    @classmethod
+    @ classmethod
     def pause_engagement(cls):
         cls.run_event.clear()
 
-    @classmethod
+    @ classmethod
     def resume_engagement(cls):
         cls.run_event.set()
 
-    @classmethod
+    @ classmethod
     def stats(cls):
         now = time.time()
         captureRate = 0
@@ -118,37 +132,50 @@ class Engagement:
             "status": cls.status
         }
 
-    @classmethod
+    @ classmethod
     def _thread(cls):
         print('Starting engagement thread.')
         cls.started_at = time.time()
-
+        cls.run_event.set()
+        last_chatted_with = None
         while True:
             if not cls.run_event.is_set():
+                cls.heart.blue().sleeping()
                 cls.status = "engagement paused"
                 cls.last_known_faces = []
                 cls.run_event.wait()
+
+            cls.set_heart_color()
 
             cls.status = "detecting new faces"
             new_faces = cls.face_detect.get_faces()
             num_new_faces = len(new_faces)
             frame = cls.face_detect.last_frame
             if num_new_faces > 0:
+                cls.last_face_at = time.time()
                 cls.status = "getting names for faces"
                 names = cls.get_names_for_faces(new_faces, frame)
                 cls.status = "analyzing"
                 num_names = len(names)
                 single_unknown = num_new_faces == 1 and num_names == 0
-                if single_unknown and camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE:
-                    cls.engagement_face = new_faces[0]
-                    cls.status = "engaging"
-                    cls.engage_new_face(new_faces[0], frame)
+                if camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE:
+                    if single_unknown:
+                        cls.heart.excited().pink()
+                        cls.engagement_face = new_faces[0]
+                        cls.status = "engaging"
+                        cls.engage_new_face(new_faces[0], frame)
+                        cls.heart.normal().red()
+                    elif num_names == 1:
+                        if not last_chatted_with or last_chatted_with != names[0]:
+                            last_chatted_with = names[0]
+                            speech.tell_me_a_funny_story(names[0])
                 elif num_names > 0:
+                    cls.last_recognized_at = time.time()
                     cls.recognized_faces += num_names
 
             time.sleep(0.1)
 
-    @classmethod
+    @ classmethod
     def get_names_for_faces(cls, new_faces, frame):
         # get frame, run face detection on it and update Engagement.face
         encodingData = cls.trainer.get_encodings_data()
@@ -180,7 +207,9 @@ class Engagement:
                     "aabb": new_faces[index]
                 })
                 if not cls.status == "engaging":
+                    cls.last_recognized_at = time.time()
                     cls.status = "greeting"
+                    cls.heart.red().normal()
                     speech.say_hello(names)
 
         cls.face_detect.resume()
@@ -191,6 +220,7 @@ class Engagement:
     @ classmethod
     def engage_new_face(cls, face, frame):
         print(f"Engaging new face: {face}")
+        cls.heart.red().excited()
 
         os.system(f"rm -Rf {paths.TMP_DATA_DIR}/*")
         cls.new_frames_saved = 0
@@ -240,7 +270,7 @@ class Engagement:
         image = frame[top:bottom, left:right]
         cls.save_image(image)
 
-    @classmethod
+    @ classmethod
     def save_image(cls, image):
         path = f"{paths.TMP_DATA_DIR}/frame_{cls.new_frames_saved}.jpg"
         cv2.imwrite(path, image)
@@ -262,7 +292,7 @@ class Engagement:
 
         return new_face_name
 
-    @classmethod
+    @ classmethod
     def is_still_unknown_face(cls):
         new_faces = cls.face_detect.get_next_faces()
         frame = cls.face_detect.last_frame
@@ -275,3 +305,16 @@ class Engagement:
                 return camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE
 
         return False
+
+    @classmethod
+    def set_heart_color(cls):
+        c_time = time.time()
+        time_since_recognize = c_time - cls.last_recognized_at
+        time_since_face = c_time - cls.last_face_at
+
+        if time_since_recognize > HEART_ACTIVE_DURATION and time_since_face > HEART_ACTIVE_DURATION:
+            cls.heart.blue().sleeping()
+        elif time_since_recognize < HEART_RECOGNIZE_DURATION:
+            cls.heart.red().normal()
+        else:
+            cls.heart.pink().normal()

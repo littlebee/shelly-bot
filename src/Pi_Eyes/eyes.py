@@ -27,7 +27,7 @@ JOYSTICK_Y_FLIP = False  # If True, reverse stick Y axis
 PUPIL_IN_FLIP = False  # If True, reverse reading from PUPIL_IN
 TRACKING = False  # If True, eyelid tracks pupil
 PUPIL_SMOOTH = 16    # If > 0, filter input from PUPIL_IN
-PUPIL_MIN = 0.0   # Lower analog range from PUPIL_IN
+PUPIL_MIN = 0.5   # Lower analog range from PUPIL_IN
 PUPIL_MAX = 1.0   # Upper "
 WINK_L_PIN = 22    # GPIO pin for LEFT eye wink button
 BLINK_PIN = 23    # GPIO pin for blink button (BOTH eyes)
@@ -368,7 +368,10 @@ def frame(p):
                 startTime = now
                 isMoving = True
 
-        # repeat for other eye if CRAZY_EYES
+    curX = 0
+    curY = 0
+
+    # repeat for other eye if CRAZY_EYES
     if CRAZY_EYES:
         if isMovingR == True:
             if dtR <= moveDurationR:
@@ -660,7 +663,6 @@ def split(  # Recursive simulated pupil response when no analog sensor
 # MAIN LOOP -- runs continuously -------------------------------------------
 
 while True:
-
     if PUPIL_IN >= 0:  # Pupil scale from sensor
         v = bonnet.channel[PUPIL_IN].value
         # If you need to calibrate PUPIL_MIN and MAX,

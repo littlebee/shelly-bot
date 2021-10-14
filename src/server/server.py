@@ -21,7 +21,9 @@ from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
 from trainer import Trainer
+from head import Head
 from engagement import Engagement
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -29,8 +31,9 @@ CORS(app, supports_credentials=True)
 camera = Camera()
 face_detect = FaceDetect(camera)
 trainer = Trainer()
+head = Head()
 # this starts a thread that engages with the huuuumans
-engagement = Engagement(camera, face_detect, trainer)
+engagement = Engagement(camera, face_detect, trainer, head)
 
 
 def gen(camera):
@@ -80,6 +83,11 @@ def pause_engagement():
 def resume_engagement():
     Engagement.resume_engagement()
     return {"status": "resumed"}
+
+
+@app.route('/centerHead')
+def center_head():
+    head.center_head()
 
 
 @app.route('/<path:filename>')

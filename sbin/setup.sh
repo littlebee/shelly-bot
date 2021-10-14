@@ -91,7 +91,7 @@ sudo pip3 install websockets flask flask_cors
 # I originally tried to leave this out
 sudo pip3 install opencv-contrib-python==3.4.3.18
 
-sudo pip3 install zmq pybase64 psutil
+sudo pip3 install zmq pybase64 psutil rpi-ws281x
 
 
 ##

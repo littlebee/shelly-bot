@@ -15,7 +15,7 @@ TARGET_HOST=$1
 
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR"
 
-scp -r ./src $TARGET_HOST:$TARGET_DIR
+scp -r ./src/server $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin $TARGET_HOST:$TARGET_DIR
 scp -r ./media $TARGET_HOST:$TARGET_DIR
