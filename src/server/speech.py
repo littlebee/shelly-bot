@@ -10,6 +10,7 @@ import random
 import paths
 
 ESPEAK_CMD = "espeak -v en+f2"
+ESPEAK_AFFIX = "--stdout | aplay"
 
 GREETINGS = [
     ["Hello", None],
@@ -44,6 +45,13 @@ REJECTIONS = [
     "Ok, well see if I remember you.  not."
 ]
 
+BOREDOM = [
+    "Yawn, I'm bored.",
+    "Well this is fun isn't it?",
+    "I might as well take a nap",
+    "If only someone would be my friend"
+]
+
 MIN_SECONDS_BETWEEN_GREETINGS = 120
 
 
@@ -75,7 +83,7 @@ def play_camera_snap():
 
 
 def espeak_cmd(text):
-    return f"{ESPEAK_CMD} \"{text}\""
+    return f"{ESPEAK_CMD} \"{text}\" {ESPEAK_AFFIX}"
 
 
 def say(text):
@@ -159,3 +167,19 @@ def nice_to_meet_you(name):
 
 def rejection():
     say_random_from(REJECTIONS)
+
+
+def i_need_a_nap():
+    say("I'm tired and need to nap now.")
+
+
+_last_time_bored = time.time()
+MIN_BORED_DELAY = 20
+
+
+def im_bored():
+    global _last_time_bored
+    current_time = time.time()
+    if current_time - _last_time_bored > MIN_BORED_DELAY:
+        _last_time_bored = current_time
+        say_random_from(BOREDOM)

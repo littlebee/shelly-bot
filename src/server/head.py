@@ -3,6 +3,7 @@
 import sys
 import time
 import threading
+import random
 
 from adafruit_servokit import ServoKit
 
@@ -10,14 +11,21 @@ from adafruit_servokit import ServoKit
 PAN_MOTOR = 0
 TILT_MOTOR = 1
 
-PAN_CENTER = 90
-TILT_CENTER = 120
-
 PAN_CHANNEL = 14
 TILT_CHANNEL = 15
 
+PAN_MIN = 50
+PAN_CENTER = 70
+PAN_MAX = 100
+
+TILT_MIN = 140
+TILT_CENTER = 150
+TILT_MAX = 160
+
 STEP_DEGREES = 10
 STEP_DELAY = .1
+
+MIN_SCAN_DELAY = 10
 
 
 servo_kit = ServoKit(channels=16)
@@ -47,8 +55,8 @@ class Head:
         'step_degrees': 10,
         'step_delay': .15,
         'stopped_event': threading.Event(),
-        'max_angle': 160,
-        'min_angle': 20,
+        'max_angle': PAN_MAX,
+        'min_angle': PAN_MIN,
         'center_angle': PAN_CENTER
     }, {
         'channel': TILT_CHANNEL,
@@ -57,8 +65,8 @@ class Head:
         'step_degrees': 10,
         'step_delay': .1,
         'stopped_event': threading.Event(),
-        'max_angle': 150,
-        'min_angle': 45,
+        'max_angle': TILT_MAX,
+        'min_angle': TILT_MIN,
         'center_angle': TILT_CENTER
     }]
 
@@ -66,6 +74,8 @@ class Head:
         if Head.thread is None:
             Head.thread = threading.Thread(target=self._thread)
             Head.thread.start()
+
+        self.lastScan = time.time()
 
     def pause(self):
         Head.pause_event.clear()
@@ -97,6 +107,19 @@ class Head:
     def tilt_to(self, angle):
         motor = Head.motors[TILT_MOTOR]
         self.move_to(motor, angle)
+
+    def scan(self):
+        now = time.time()
+        if now - self.lastScan < MIN_SCAN_DELAY:
+            return
+        self.lastScan = now
+        for motor in Head.motors:
+            self.move_to(motor, random.randrange(
+                motor['min_angle'], motor['max_angle']))
+
+    def sleep(self):
+        self.center_head()
+        self.tilt_to(TILT_MIN)
 
     def wait_for_motor_stopped(self, motor):
         motor['stopped_event'].wait()

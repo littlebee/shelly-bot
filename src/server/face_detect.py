@@ -24,6 +24,7 @@ class FaceDetect:
     frames_read = 0
     started_at = 0
     last_dimensions = {}
+    total_faces_detected = 0
 
     detected_event = Event()
     # we don't need the one to many event, a simple event will do
@@ -66,6 +67,7 @@ class FaceDetect:
             "framesRead": cls.frames_read,
             "totalTime": total_time,
             "fps": cls.frames_read / total_time,
+            "total_faces_detected": cls.total_faces_detected
         }
 
     @classmethod
@@ -86,7 +88,7 @@ class FaceDetect:
             # engagement can remove box augmentations
             cls.detected_event.set()  # send signal to clients
 
-            if len(cls.last_faces) > 0:
-                print(f"Detected faces: {cls.last_faces}")
+            print(f"Detected faces: {cls.last_faces}")
+            cls.total_faces_detected += len(cls.last_faces)
 
             time.sleep(0)

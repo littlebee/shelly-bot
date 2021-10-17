@@ -22,7 +22,7 @@ import faces
 
 from hearing import listen_for_name
 from sensors import camera_distance
-from heart import Heart
+# from heart import Heart
 
 # in meters
 MAX_CAMERA_DISTANCE_TO_ENGAGE = 1
@@ -40,7 +40,7 @@ class Engagement:
     head = None
     run_event = threading.Event()
     # always lead with your heart :)
-    heart = Heart()
+    # heart = Heart()
 
     # array of {"name": "face_24", "aabb": (267, 460, 329, 398)}
     # used to augment_frame
@@ -140,12 +140,12 @@ class Engagement:
         last_chatted_with = None
         while True:
             if not cls.run_event.is_set():
-                cls.heart.blue().sleeping()
+                # cls.heart.blue().sleeping()
                 cls.status = "engagement paused"
                 cls.last_known_faces = []
                 cls.run_event.wait()
 
-            cls.set_heart_color()
+            # cls.set_heart_color()
 
             cls.status = "detecting new faces"
             new_faces = cls.face_detect.get_faces()
@@ -160,11 +160,11 @@ class Engagement:
                 single_unknown = num_new_faces == 1 and num_names == 0
                 if camera_distance() <= MAX_CAMERA_DISTANCE_TO_ENGAGE:
                     if single_unknown:
-                        cls.heart.excited().pink()
+                        # cls.heart.excited().pink()
                         cls.engagement_face = new_faces[0]
                         cls.status = "engaging"
                         cls.engage_new_face(new_faces[0], frame)
-                        cls.heart.normal().red()
+                        # cls.heart.normal().red()
                     elif num_names == 1:
                         if not last_chatted_with or last_chatted_with != names[0]:
                             last_chatted_with = names[0]
@@ -172,6 +172,12 @@ class Engagement:
                 elif num_names > 0:
                     cls.last_recognized_at = time.time()
                     cls.recognized_faces += num_names
+                else:
+                    speech.im_bored()
+                    cls.head.scan()
+            else:
+                speech.im_bored()
+                cls.head.scan()
 
             time.sleep(0.1)
 
@@ -209,7 +215,7 @@ class Engagement:
                 if not cls.status == "engaging":
                     cls.last_recognized_at = time.time()
                     cls.status = "greeting"
-                    cls.heart.red().normal()
+                    # cls.heart.red().normal()
                     speech.say_hello(names)
 
         cls.face_detect.resume()
@@ -220,7 +226,7 @@ class Engagement:
     @ classmethod
     def engage_new_face(cls, face, frame):
         print(f"Engaging new face: {face}")
-        cls.heart.red().excited()
+        # cls.heart.red().excited()
 
         os.system(f"rm -Rf {paths.TMP_DATA_DIR}/*")
         cls.new_frames_saved = 0
@@ -249,6 +255,10 @@ class Engagement:
         speech.and_im_spent()
         name = cls.create_face_files()
         speech.nice_to_meet_you(name)
+
+        time.sleep(4)
+        speech.i_need_a_nap()
+        cls.head.sleep()
 
         cls.trainer.trigger_retrain()
         cls.status = "retraining"
