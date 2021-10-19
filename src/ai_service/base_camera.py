@@ -10,13 +10,7 @@ https://github.com/adeept/Adeept_RaspTank/blob/a6c45e8cc7df620ad8977845eda2b8396
 import time
 import threading
 import cv2
-try:
-    from greenlet import getcurrent as get_ident
-except ImportError:
-    try:
-        from thread import get_ident
-    except ImportError:
-        from _thread import get_ident
+
 
 # last n seconds to use for fps calc
 FPS_WINDOW = 60

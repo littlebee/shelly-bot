@@ -182,48 +182,6 @@ class Engagement:
             time.sleep(0.1)
 
     @ classmethod
-    def get_names_for_faces(cls, new_faces, frame):
-        # get frame, run face detection on it and update Engagement.face
-        encodingData = cls.trainer.get_encodings_data()
-
-        encodings = faces.face_encodings(frame, new_faces)
-        names = []
-        cls.last_known_faces = []
-
-        # attempt to match each face in the input image to our known encodings
-        for index, encoding in enumerate(encodings):
-            matches = faces.compare_faces(encodingData["encodings"], encoding)
-
-            # check to see if we have found a match
-            if True in matches:
-                matched_indexes = [i for (i, b) in enumerate(matches) if b]
-                counts = {}
-
-                for i in matched_indexes:
-                    name = encodingData["names"][i]
-                    counts[name] = counts.get(name, 0) + 1
-
-                # determine the recognized face with the largest number of votes
-                name = max(counts, key=counts.get)
-
-                # update the list of matched names
-                names.append(name)
-                cls.last_known_faces .append({
-                    "name": name,
-                    "aabb": new_faces[index]
-                })
-                if not cls.status == "engaging":
-                    cls.last_recognized_at = time.time()
-                    cls.status = "greeting"
-                    # cls.heart.red().normal()
-                    speech.say_hello(names)
-
-        cls.face_detect.resume()
-        print(f"found known faces: {names}")
-
-        return names
-
-    @ classmethod
     def engage_new_face(cls, face, frame):
         print(f"Engaging new face: {face}")
         # cls.heart.red().excited()

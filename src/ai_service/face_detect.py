@@ -12,8 +12,8 @@ import time
 import threading
 import cv2
 
-import faces
-from event import Event
+# import faces
+import face_recognition
 
 
 class FaceDetect:
@@ -26,11 +26,11 @@ class FaceDetect:
     last_dimensions = {}
     total_faces_detected = 0
 
-    detected_event = Event()
-    # we don't need the one to many event, a simple event will do
+    detected_event = threading.Event()
     pause_event = threading.Event()
 
-    def __init__(self, camera):
+    def __init__(self, camera, trainer):
+        FaceDetect.trainer = trainer
         FaceDetect.camera = camera
         if FaceDetect.thread is None:
             FaceDetect.thread = threading.Thread(target=self._thread)
@@ -46,10 +46,20 @@ class FaceDetect:
 
     def augment_frame(self, frame):
         # Display the results
-        for top, right, bottom, left in self.get_faces():
+        for face in self.get_faces():
+            name = face["name"]
+            top, right, bottom, left = face["aabb"]
+            color = (0, 0, 255)
+
+            if name != 'unknown':
+                color = (255, 0, 0)
+
             # Draw a box around the face
             cv2.rectangle(frame, (left, top),
-                          (right, bottom), (0, 0, 255), 2)
+                          (right, bottom), color, 2)
+
+            cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                        .4, color, 1)
         return frame
 
     def pause(self):
@@ -74,21 +84,59 @@ class FaceDetect:
     def _thread(cls):
         print('Starting face detection thread.')
         cls.started_at = time.time()
+
+        # start running on start
         cls.pause_event.set()
 
         while True:
-            # cls.pause_event.wait()
+            cls.pause_event.wait()
             # get frame, run face detection on it and update FaceDetect.last_faces
-            cls.last_frame = cls.camera.get_frame().copy()
-            cls.last_faces = faces.face_locations(cls.last_frame)
+            cls.last_frame = cls.camera.get_frame()
+
+            # new_faces = faces.face_locations(cls.last_frame)
+            new_faces = face_recognition.face_locations(cls.last_frame)
+            cls.last_faces = cls.get_names_for_faces(new_faces, cls.last_frame)
+
             cls.frames_read += 1
             cls.last_dimensions = cls.last_frame.shape
 
-            # set the detected_event even if there are no faces so
-            # engagement can remove box augmentations
-            cls.detected_event.set()  # send signal to clients
-
-            print(f"Detected faces: {cls.last_faces}")
-            cls.total_faces_detected += len(cls.last_faces)
+            num_faces = len(cls.last_faces)
+            if num_faces > 0:
+                cls.detected_event.set()  # send signal to clients
+                cls.total_faces_detected += num_faces
 
             time.sleep(0)
+
+    @classmethod
+    def get_names_for_faces(cls, new_faces, frame):
+
+        encodingData = cls.trainer.get_encodings_data()
+        encodings = face_recognition.face_encodings(frame, new_faces)
+
+        named_faces = []
+
+        # attempt to match each face in the input image to our known encodings
+        for index, encoding in enumerate(encodings):
+            matches = face_recognition.compare_faces(
+                encodingData["encodings"], encoding)
+            name = 'unknown'
+            # check to see if we have found a match
+            if True in matches:
+                matched_indexes = [i for (i, b) in enumerate(matches) if b]
+                counts = {}
+
+                for i in matched_indexes:
+                    name = encodingData["names"][i]
+                    counts[name] = counts.get(name, 0) + 1
+
+                # determine the recognized face with the largest number of votes
+                name = max(counts, key=counts.get)
+
+            named_faces.append({
+                "name": name,
+                "aabb": new_faces[index]
+            })
+
+        print(f"found faces: {named_faces}")
+
+        return named_faces

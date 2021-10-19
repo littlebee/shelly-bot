@@ -84,24 +84,18 @@ class Trainer:
 
     @classmethod
     def _load_encodings_from_file(cls):
-        time_started = time.time()
-        cls.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
-        new_encodings_data = pickle.loads(
-            open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
+        if os.path.exists(paths.ENCODINGS_FILE_PATH):
+            time_started = time.time()
+            cls.last_modified = os.path.getmtime(paths.ENCODINGS_FILE_PATH)
+            new_encodings_data = pickle.loads(
+                open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
 
-        cls.times_read += 1
-        cls.encodings_data = new_encodings_data
-        cls.last_load_duration = time.time() - time_started
+            cls.times_read += 1
+            cls.encodings_data = new_encodings_data
+            cls.last_load_duration = time.time() - time_started
 
-        print(
-            f"Trainer updated from {paths.ENCODINGS_FILE_PATH} in {cls.last_load_duration}s")
-
-        print(
-            f"encodings data length: {len(new_encodings_data['encodings'])}")
-        print(
-            f"encodings data length ea: {len(new_encodings_data['encodings'][0])}")
-        print(
-            f"encodings data size ea: {sys.getsizeof(new_encodings_data['encodings'][0][0])}")
+            print(
+                f"Trainer updated from {paths.ENCODINGS_FILE_PATH} in {cls.last_load_duration}s")
 
     @classmethod
     def _retrain_model(cls):
@@ -114,6 +108,7 @@ class Trainer:
         #
         # See comment on this commit:
         # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
-        os.system('python3 src/server/retrain_model.py')
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        os.system(f"python3 {dir_path}/retrain_model.py")
         cls.last_retrain_duration = time.time() - time_started
         cls._load_encodings_from_file()

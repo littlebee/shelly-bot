@@ -11,6 +11,7 @@
 
 import os
 import threading
+import json
 import psutil
 
 from flask import Flask, Response, send_from_directory
@@ -21,31 +22,38 @@ from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
 from trainer import Trainer
-from head import Head
-from engagement import Engagement
 
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 camera = Camera()
-face_detect = FaceDetect(camera)
 trainer = Trainer()
-head = Head()
-# this starts a thread that engages with the huuuumans
-engagement = Engagement(camera, face_detect, trainer, head)
+face_detect = FaceDetect(camera, trainer)
 
 
 def gen(camera):
     """Video streaming generator function."""
     while True:
         frame = camera.get_frame()
+        # can't augment the frame directly from the camera as that will
+        # alter it for all and you will see the face detection start to
+        # stutter and blank out
         frame = frame.copy()
+        # add names and bounding boxes
         frame = face_detect.augment_frame(frame)
-        frame = engagement.augment_frame(frame)
         jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
+
+
+def json_response(data):
+    response = app.response_class(
+        response=json.dumps(data),
+        status=200,
+        mimetype='application/json'
+    )
+    return response
 
 
 @app.route('/video_feed')
@@ -60,38 +68,35 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 @app.route('/stats')
 def send_stats():
-    return {
+    return json_response({
         "capture": BaseCamera.stats(),
-        "engagement": Engagement.stats(),
         "faceDetect": FaceDetect.stats(),
         "system": {
             "cpuPercent": psutil.cpu_percent(),
             "ram": psutil.virtual_memory()[2],
         },
         "trainer": Trainer.stats()
-
-    }
-
-
-@app.route('/pauseEngagement')
-def pause_engagement():
-    Engagement.pause_engagement()
-    return {"status": "paused"}
+    })
 
 
-@app.route('/resumeEngagement')
-def resume_engagement():
-    Engagement.resume_engagement()
-    return {"status": "resumed"}
+@app.route('/pauseFaceDetect')
+def pause_face_detect():
+    face_detect.pause()
+    return json_response({
+        "status": "paused"
+    })
 
 
-@app.route('/centerHead')
-def center_head():
-    head.center_head()
+@app.route('/resumeFaceDetect')
+def resume_face_detect():
+    face_detect.resume()
+    return json_response({
+        "status": "resumed"
+    })
 
 
 @app.route('/<path:filename>')
-def sendgen(filename):
+def send_file(filename):
     return send_from_directory(dir_path, filename)
 
 
@@ -107,13 +112,13 @@ class webapp:
     def thread(self):
         app.run(host='0.0.0.0', threaded=True)
 
-    def startthread(self):
+    def start_thread(self):
         # Define a thread for FPV and OpenCV
-        fps_threading = threading.Thread(target=self.thread)
+        thread = threading.Thread(target=self.thread)
         # 'True' means it is a front thread,it would close when the mainloop() closes
-        fps_threading.setDaemon(False)
-        fps_threading.start()  # Thread starts
+        thread.setDaemon(False)
+        thread.start()  # Thread starts
 
 
 flask_app = webapp()
-flask_app.startthread()
+flask_app.start_thread()

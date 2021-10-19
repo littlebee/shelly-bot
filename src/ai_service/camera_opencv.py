@@ -31,7 +31,8 @@ class Camera(BaseCamera):
     def frames():
         print('initializing VideoCapture')
 
-        camera = cv2.VideoCapture(Camera.video_source)
+        camera = cv2.VideoCapture(
+            Camera.video_source)  # , apiPreference=cv2.CAP_V4L2)
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
 
