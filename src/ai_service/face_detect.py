@@ -8,12 +8,21 @@ A thread is created that does the heavy lifting of detecting faces and updates
 a class var that contains the last faces detected. This allows the thread providing
 the video feed to stream at 30fps while face frames lag behind at 3fps (maybe upto 10?)
 """
+import os
 import time
 import threading
 import cv2
+from face_recognition.api import face_distance
+import numpy
 
 # import faces
 import face_recognition
+
+# if true, use face_recognition.face_distance to determin known faces
+USE_FACE_DISTANCE = os.getenv('USE_FACE_DISTANCE') == '1' or False
+
+if USE_FACE_DISTANCE:
+    print('Using face_distance to determine known faces')
 
 
 class FaceDetect:
@@ -91,10 +100,16 @@ class FaceDetect:
         while True:
             cls.pause_event.wait()
             # get frame, run face detection on it and update FaceDetect.last_faces
-            cls.last_frame = cls.camera.get_frame()
+            frame = cls.last_frame = cls.camera.get_frame()
 
-            # new_faces = faces.face_locations(cls.last_frame)
-            new_faces = face_recognition.face_locations(cls.last_frame)
+            # Not sure why but the recommended change below caused it to perform worse
+            # Resize frame of video to 1/4 size
+            # Convert the image from BGR color
+            # small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+            # rgb_small_frame = frame[:, :, ::-1]
+
+            new_faces = face_recognition.face_locations(frame)
+
             cls.last_faces = cls.get_names_for_faces(new_faces, cls.last_frame)
 
             cls.frames_read += 1
@@ -117,20 +132,27 @@ class FaceDetect:
 
         # attempt to match each face in the input image to our known encodings
         for index, encoding in enumerate(encodings):
-            matches = face_recognition.compare_faces(
-                encodingData["encodings"], encoding)
             name = 'unknown'
-            # check to see if we have found a match
-            if True in matches:
-                matched_indexes = [i for (i, b) in enumerate(matches) if b]
-                counts = {}
+            if USE_FACE_DISTANCE:
+                face_distances = face_recognition.face_distance(
+                    encodingData["encodings"], encoding)
+                best_match_index = numpy.argmin(face_distances)
+                if face_distances[best_match_index] < 0.65:
+                    name = encodingData["names"][best_match_index]
+            else:
+                matches = face_recognition.compare_faces(
+                    encodingData["encodings"], encoding)
+                # check to see if we have found a match
+                if True in matches:
+                    matched_indexes = [i for (i, b) in enumerate(matches) if b]
+                    counts = {}
 
-                for i in matched_indexes:
-                    name = encodingData["names"][i]
-                    counts[name] = counts.get(name, 0) + 1
+                    for i in matched_indexes:
+                        name = encodingData["names"][i]
+                        counts[name] = counts.get(name, 0) + 1
 
-                # determine the recognized face with the largest number of votes
-                name = max(counts, key=counts.get)
+                    # determine the recognized face with the largest number of votes
+                    name = max(counts, key=counts.get)
 
             named_faces.append({
                 "name": name,
