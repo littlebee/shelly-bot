@@ -9,23 +9,16 @@ https://github.com/adeept/Adeept_RaspTank/blob/a6c45e8cc7df620ad8977845eda2b8396
 """
 import time
 import threading
-import cv2
 
-
-# last n seconds to use for fps calc
-FPS_WINDOW = 60
+from fps_stats import FpsStats
 
 
 class BaseCamera(object):
     thread = None  # background thread that reads frames from camera
     frame = None  # current frame is stored here by background thread
     last_access = 0  # time of last client access to the camera
-    frames_read = 0
-    started_at = 0
 
-    fps_frames_read = 0
-    fps_started_at = 0
-    last_fps = 0
+    fps_stats = FpsStats()
 
     def __init__(self):
         """Start the background camera thread if it isn't running yet."""
@@ -53,43 +46,16 @@ class BaseCamera(object):
 
     @classmethod
     def stats(cls):
-        now = time.time()
-        total_time = now - cls.started_at
-        return {
-            "totalFramesRead": cls.frames_read,
-            "totalTime": total_time,
-            "overallFps": cls.frames_read / total_time,
-            "fpsStartedAt": cls.fps_started_at,
-            "floatingFps": cls.last_fps
-        }
+        return cls.fps_stats.stats()
 
     @classmethod
     def _thread(cls):
         """Camera background thread."""
         print('Starting camera thread.')
-        BaseCamera.started_at = time.time()
-        BaseCamera.fps_started_at = time.time()
+        BaseCamera.fps_stats.start()
 
         frames_iterator = cls.frames()
-
         for frame in frames_iterator:
             BaseCamera.frame = frame
-            BaseCamera.frames_read += 1
-
-            BaseCamera.fps_frames_read += 1
-            now = time.time()
-            fps_time = now - BaseCamera.fps_started_at
-            if fps_time > FPS_WINDOW:
-                BaseCamera.last_fps = BaseCamera.fps_frames_read / fps_time
-                BaseCamera.fps_started_at = time.time()
-                BaseCamera.fps_frames_read = 0
-
+            BaseCamera.fps_stats.increment()
             time.sleep(0)
-
-            # if there hasn't been any clients asking for frames in
-            # the last 10 seconds then stop the thread
-            # if time.time() - BaseCamera.last_access > 10:
-            #     frames_iterator.close()
-            #     print('Stopping camera thread due to inactivity.')
-            #     break
-        BaseCamera.thread = None

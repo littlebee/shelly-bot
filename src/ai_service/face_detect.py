@@ -17,6 +17,8 @@ import numpy
 
 # import faces
 import face_recognition
+from fps_stats import FpsStats
+
 
 # if true, use face_recognition.face_distance to determin known faces
 USE_FACE_DISTANCE = os.getenv('USE_FACE_DISTANCE') == '1' or False
@@ -30,8 +32,7 @@ class FaceDetect:
     camera = None
     last_faces = []
     last_frame = []
-    frames_read = 0
-    started_at = 0
+    fps_stats = FpsStats()
     last_dimensions = {}
     total_faces_detected = 0
 
@@ -83,16 +84,14 @@ class FaceDetect:
         total_time = now - cls.started_at
         return {
             "lastDimensions": cls.last_dimensions,
-            "framesRead": cls.frames_read,
-            "totalTime": total_time,
-            "fps": cls.frames_read / total_time,
+            "fps": cls.fps_stats.stats(),
             "total_faces_detected": cls.total_faces_detected
         }
 
     @classmethod
     def _thread(cls):
         print('Starting face detection thread.')
-        cls.started_at = time.time()
+        cls.fps_stats.start()
 
         # start running on start
         cls.pause_event.set()
@@ -102,7 +101,9 @@ class FaceDetect:
             # get frame, run face detection on it and update FaceDetect.last_faces
             frame = cls.last_frame = cls.camera.get_frame()
 
-            # Not sure why but the recommended change below caused it to perform worse
+            # Not sure why but the recommended change below caused it to perform worse.
+            # I don't think it's necessary if the model is also trained with BGR images?
+
             # Resize frame of video to 1/4 size
             # Convert the image from BGR color
             # small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
@@ -112,7 +113,7 @@ class FaceDetect:
 
             cls.last_faces = cls.get_names_for_faces(new_faces, cls.last_frame)
 
-            cls.frames_read += 1
+            cls.fps_stats.increment()
             cls.last_dimensions = cls.last_frame.shape
 
             num_faces = len(cls.last_faces)
