@@ -150,7 +150,11 @@ if [ "$(uname -p)" == "aarch64" ]; then
   wget http://dlib.net/files/dlib-19.22.tar.bz2
   tar jxf dlib-19.22.tar.bz2
   cd dlib-19.22
+
+  # This was recomended in Alex's doorbell cam blog post, but
+  # it doesn't seem to make any difference to stability or perf
   # sed -i 's/forward_algo = forward_best_algo/\/\/ forward_algo = forward_best_algo/g' dlib/cuda/cudnn_dlibapi.cpp
+
   # This could take 30 - 60 mins to complete
   sudo python3 setup.py install
 

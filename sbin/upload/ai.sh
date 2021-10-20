@@ -19,4 +19,5 @@ scp -r ./src/ai_service $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin $TARGET_HOST:$TARGET_DIR
 scp -r ./media $TARGET_HOST:$TARGET_DIR
+scp -r ./test_data $TARGET_HOST:$TARGET_DIR
 scp -r ./run-ai.sh $TARGET_HOST:$TARGET_DIR

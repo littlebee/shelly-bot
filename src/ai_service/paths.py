@@ -7,4 +7,4 @@ TMP_NAME_FILE = f"{TMP_DATA_DIR}/name.wav"
 FACES_DATA_DIR = "data/faces"
 
 ENCODINGS_FILE_PATH = "data/encodings.pickle"
-TRAINER_PROCESSED_FILE_PATH = "data/faces_processed.json"
+TRAINER_PROCESSED_FILE_PATH = "data/faces_processed.txt"

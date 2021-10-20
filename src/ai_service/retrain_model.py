@@ -3,8 +3,8 @@ import os
 import time
 import json
 import pickle
-import face_recognition
 import cv2
+import face_recognition
 from imutils import paths as imutils_paths
 
 import paths
@@ -16,7 +16,8 @@ def retrain_model():
     processed_paths = []
     if os.path.exists(paths.TRAINER_PROCESSED_FILE_PATH):
         with open(paths.TRAINER_PROCESSED_FILE_PATH, 'r') as file:
-            processed_paths = json.load(file)["directories"]
+            for line in file.readlines():
+                processed_paths.append(line.strip())
 
     encodings_data = {
         "encodings": [],
@@ -44,14 +45,15 @@ def retrain_model():
 
         image = cv2.imread(image_path)
         face_locations = face_recognition.face_locations(image)
-        if len(face_locations) == 1:
-            top, right, bottom, left = face_locations[0]
-            image = image[top:bottom, left:right]
-            # convert from BGR (OpenCV ordering) to RGB
-            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        for top, right, bottom, left in face_locations:
+            frame = image[top:bottom, left:right]
+            # Resize frame of video to 1/4 size
+            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+            # Convert the image from BGR color
+            rgb_small_frame = small_frame[:, :, ::-1]
 
             # compute the facial embedding for the face
-            encodings = face_recognition.face_encodings(rgb)
+            encodings = face_recognition.face_encodings(rgb_small_frame)
 
             for encoding in encodings:
                 encodings_data["encodings"].append(encoding)
@@ -69,9 +71,8 @@ def retrain_model():
     f.write(pickle.dumps(encodings_data))
     f.close()
 
-    f = open(paths.TRAINER_PROCESSED_FILE_PATH, "w")
-    f.write(json.dumps({"directories": processed_paths}))
-    f.close()
+    with open(paths.TRAINER_PROCESSED_FILE_PATH, "w") as file:
+        file.write('\n'.join(processed_paths) + '\n')
 
 
 if __name__ == '__main__':

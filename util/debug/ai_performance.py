@@ -61,6 +61,7 @@ camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 encodings_data = pickle.loads(
     open("data/encodings.pickle", "rb").read(), encoding='latin1')
+print(f"loaded {len(encodings_data['encodings'])} encodings")
 
 fps_stats = FpsStats()
 
