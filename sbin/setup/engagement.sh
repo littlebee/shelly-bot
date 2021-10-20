@@ -3,7 +3,6 @@
 # This script is meant to be run on the bot.  The upload.sh script in
 # this directory will upload us and all of ./sbin to $TARGET_DIR
 #
-# This setup copied from here: https://www.tomshardware.com/how-to/raspberry-pi-facial-recognition
 
 
 # echo on

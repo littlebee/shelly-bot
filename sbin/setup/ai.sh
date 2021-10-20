@@ -3,7 +3,6 @@
 # This script is meant to be run on the bot.  The upload.sh script in
 # this directory will upload us and all of ./sbin to $TARGET_DIR
 #
-# This setup copied from here: https://www.tomshardware.com/how-to/raspberry-pi-facial-recognition
 
 
 # echo on
@@ -15,13 +14,6 @@ set -e
 TARGET_DIR="/home/pi/shelly-bot"
 TMP_DIR="/tmp/shelly-bot"
 
-##
-#
-# Added the below following the excellent Tom's Hardward
-# blog written by Caroline Dunn.  Thank you @carolinedunn!
-#
-# https://www.tomshardware.com/how-to/raspberry-pi-facial-recognition
-##
 
 sudo apt install -y cmake build-essential pkg-config git
 sudo apt install -y libjpeg-dev libtiff-dev libpng-dev libwebp-dev libopenexr-dev
@@ -32,9 +24,7 @@ sudo apt install -y libhdf5-dev
 sudo apt install -y python3-dev python3-pip python3-numpy
 
 
-
-
-# if jetson nano with ubuntu
+# if jetson nano (ubuntu)
 if [ "$(uname -p)" == "aarch64" ]; then
   # see also, https://automaticaddison.com/how-to-install-opencv-4-5-on-nvidia-jetson-nano/
   sudo sh -c "echo '/usr/local/cuda/lib64' >> /etc/ld.so.conf.d/nvidia-tegra.conf"
@@ -185,10 +175,6 @@ sudo pip3 install websockets flask flask_cors
 sudo pip3 install opencv-contrib-python
 sudo pip3 install pybase64 psutil
 
-
-##
-# End Adeept setup
-##
 
 mkdir -p $TARGET_DIR/data
 mkdir -p $TARGET_DIR/data/engagement
