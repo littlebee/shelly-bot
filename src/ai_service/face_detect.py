@@ -80,8 +80,6 @@ class FaceDetect:
 
     @classmethod
     def stats(cls):
-        now = time.time()
-        total_time = now - cls.started_at
         return {
             "lastDimensions": cls.last_dimensions,
             "fps": cls.fps_stats.stats(),

@@ -95,6 +95,14 @@ def resume_face_detect():
     })
 
 
+@app.route('/retrainModel')
+def retrainModel():
+    trainer.trigger_retrain()
+    return json_response({
+        "status": "ok"
+    })
+
+
 @app.route('/<path:filename>')
 def send_file(filename):
     return send_from_directory(dir_path, filename)

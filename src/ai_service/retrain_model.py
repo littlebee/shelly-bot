@@ -5,75 +5,96 @@ import json
 import pickle
 import cv2
 import face_recognition
+
+import multiprocessing as mp
 from imutils import paths as imutils_paths
 
 import paths
 
 
-def retrain_model():
-    image_paths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
-    image_paths.sort()
-    processed_paths = []
-    if os.path.exists(paths.TRAINER_PROCESSED_FILE_PATH):
-        with open(paths.TRAINER_PROCESSED_FILE_PATH, 'r') as file:
-            for line in file.readlines():
-                processed_paths.append(line.strip())
+def train_images(image_paths, queue):
+    returnVal = []
+    for image_path in image_paths:
+        returnVal.append(train_image(image_path, queue=queue))
+    print(f"train_images: {returnVal}")
+    return returnVal
 
+
+def train_image(image_path, queue):
+
+    # extract the person name from the image path
+    name = image_path.split(os.path.sep)[-2]
     encodings_data = {
         "encodings": [],
-        "names": []
+        "name": name,
+        "image_path": image_path
     }
-    if os.path.exists(paths.ENCODINGS_FILE_PATH):
-        encodings_data = pickle.loads(
-            open(paths.ENCODINGS_FILE_PATH, "rb").read(), encoding='latin1')
 
-    time_started = time.time()
-    images_already_processed = 0
-    new_images_processed = 0
-    # loop over the image paths
-    for (i, image_path) in enumerate(image_paths):
-        if image_path in processed_paths:
-            images_already_processed += 1
-            # print(f"skipping already processed path {image_path}")
-            continue
+    print(f"train_image: {image_path}")
+    image = cv2.imread(image_path)
+    face_locations = face_recognition.face_locations(image)
+    for top, right, bottom, left in face_locations:
+        frame = image[top:bottom, left:right]
+        # Resize frame of video to 1/4 size
+        # small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        # Convert the image from BGR color
+        rgb_frame = frame[:, :, ::-1]
+        # compute the facial embedding for the face
+        encodings = face_recognition.face_encodings(rgb_frame)
+        for encoding in encodings:
+            encodings_data["encodings"].append(encoding)
 
-        new_images_processed += 1
-        processed_paths.append(image_path)
-        # extract the person name from the image path
-        print(f"retrain_model: processing image path {image_path}")
-        name = image_path.split(os.path.sep)[-2]
+    if queue:
+        queue.put(encodings_data)
 
-        image = cv2.imread(image_path)
-        face_locations = face_recognition.face_locations(image)
-        for top, right, bottom, left in face_locations:
-            frame = image[top:bottom, left:right]
-            # Resize frame of video to 1/4 size
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-            # Convert the image from BGR color
-            rgb_small_frame = small_frame[:, :, ::-1]
-
-            # compute the facial embedding for the face
-            encodings = face_recognition.face_encodings(rgb_small_frame)
-
-            for encoding in encodings:
-                encodings_data["encodings"].append(encoding)
-                encodings_data["names"].append(name)
-
-    run_time = time.time() - time_started
-    fps = new_images_processed / run_time
-    print(
-        f"retrain_model: skipped {images_already_processed} images already in encodings")
-    print(
-        f"retrain_model: processed {new_images_processed} new images in {run_time}s.  ({fps} fps)")
-
-    # save encodings data in pickle file for faster start up
-    f = open(paths.ENCODINGS_FILE_PATH, "wb")
-    f.write(pickle.dumps(encodings_data))
-    f.close()
-
-    with open(paths.TRAINER_PROCESSED_FILE_PATH, "w") as file:
-        file.write('\n'.join(processed_paths) + '\n')
+    return encodings_data
 
 
 if __name__ == '__main__':
-    retrain_model()
+    image_paths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
+    image_paths.sort()
+    started_at = time.time()
+    num_procs = int(os.getenv("NUM_PROCS") or '4')
+
+    mp.set_start_method('spawn')
+
+    if os.getenv('USE_MP_POOL') == '1':
+        print(f"Using multiprocessing pool with {num_procs} processes")
+        with mp.Pool(num_procs) as p:
+            p.map(train_image, image_paths)
+
+    elif os.getenv('USE_DIRECT_CALL') == '1':
+        print('Using direct call for this process')
+        train_images(image_paths)
+
+    else:
+        num_images = len(image_paths)
+
+        print(f"Using {num_procs} processes (sans pool)")
+
+        imgs_per_chunk = int(num_images / num_procs)
+        leftover_images = num_images % num_procs
+        chunks = []
+        for i in range(num_procs):
+            chunk_start = i * imgs_per_chunk
+            chunk = image_paths[chunk_start:chunk_start + imgs_per_chunk]
+            print(f"chunk: {chunk}")
+            chunks.append(chunk)
+        chunks[0] = chunks[0] + image_paths[num_images - leftover_images:]
+
+        chunk_lengths = list(map(lambda chunk: len(chunk), chunks))
+        print(f"chunk lengths: {chunk_lengths}")
+
+        processes = []
+        for i in range(num_procs):
+            p = mp.Process(target=train_images, args=(list(chunks[i]), ))
+            p.start()
+            processes.append(p)
+
+        for p in processes:
+            p.join()
+
+    total_time = time.time() - started_at
+    num_image_paths = len(image_paths)
+    print(
+        f"\nprocessed {num_image_paths} in {total_time}s  ({num_image_paths / total_time})")

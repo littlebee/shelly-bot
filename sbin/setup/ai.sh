@@ -162,6 +162,15 @@ if [ "$(uname -p)" == "aarch64" ]; then
   sudo -H pip install -U jetson-stats
   sudo systemctl restart jetson_stats.service
 
+  # stop gnome desktop from loading (we need the memory too badly)
+  #  to restart manually:
+  #     sudo systemctl start gdm3
+  #  to reenable at boot:
+  #     sudo systemctl set-default graphical
+  sudo systemctl set-default multi-user
+  # same for docker
+  sudo systemctl disable docker.service
+  sudo systemctl disable docker.socket
 
 # raspberry pi
 else

@@ -10,8 +10,17 @@ import time
 import threading
 import pickle
 
+import multiprocessing as mp
 from imutils import paths as imutils_paths
+from functools import partial
+
+from retrain_model import train_image
 import paths
+
+mp.set_start_method('spawn')
+
+# number of retrain processes to launch
+NUM_PROCS = 2
 
 
 class Trainer:
@@ -21,7 +30,7 @@ class Trainer:
     # default initial encodings data in case a client calls
     # get_encodings_data() before the pickle finishes loading
     # on startup
-    encodings_data = {"encodings": [], "names": []}
+    encodings_data = {'encodings': [], 'names': [], 'image_paths': []}
     # used to prompt the trainer thread to run _retrain_model()
     retrain_needed_event = threading.Event()
 
@@ -30,6 +39,8 @@ class Trainer:
     last_retrain_duration = 0
     # time it took to load the encodings from the pickle
     last_load_duration = 0
+    # number of images last retrain
+    last_num_retrained = 0
 
     def __init__(self):
         if Trainer.thread is None:
@@ -62,14 +73,20 @@ class Trainer:
 
     @classmethod
     def stats(cls):
+        fps = 0
+        if cls.last_retrain_duration > 0:
+            fps = cls.last_num_retrained / cls.last_retrain_duration
+
         return {
+            "lastLoadDuration": cls.last_load_duration,
             "lastRetrainDuration": cls.last_retrain_duration,
-            "lastLoadDuration": cls.last_load_duration
+            "lastRetrainCount": cls.last_num_retrained,
+            "lastRetrainFps": fps
         }
 
     @classmethod
     def _thread(cls):
-        print('Starting encoding file watch thread.')
+        print('Starting trainer thread.')
         Trainer.started_at = time.time()
 
         # In case a retrain request comes in while loading...
@@ -96,6 +113,42 @@ class Trainer:
 
             print(
                 f"Trainer updated from {paths.ENCODINGS_FILE_PATH} in {cls.last_load_duration}s")
+        print(
+            f"loaded {len(cls.encodings_data['encodings'])} encodings, {len(cls.encodings_data['names'])} names, and {len(cls.encodings_data['image_paths'])} image paths")
+
+    @classmethod
+    def _save_encodings_to_file(cls):
+        print(
+            f"saving {len(cls.encodings_data['encodings'])} encodings, {len(cls.encodings_data['names'])} names, and {len(cls.encodings_data['image_paths'])} image paths")
+        with open(paths.ENCODINGS_FILE_PATH, 'wb') as fp:
+            pickle.dump(cls.encodings_data, fp,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def _find_untrained_file_paths(cls):
+        image_paths = list(imutils_paths.list_images(paths.FACES_DATA_DIR))
+        processed_paths = cls.encodings_data['image_paths']
+        untrained_paths = [
+            value for value in image_paths if value not in processed_paths]
+        untrained_paths.sort()
+        return untrained_paths
+
+    @classmethod
+    def _handle_retrain_result(cls, result):
+        if not result:
+            return
+
+        print(
+            f"got result from queue with {len(result['encodings'])} encodings for {result['name']} at {result['image_path']}")
+
+        if len(result['encodings']) == 0:
+            cls.encodings_data['image_paths'].append(result['image_path'])
+        else:
+            for encoding in result['encodings']:
+                cls.encodings_data['encodings'].append(encoding)
+                cls.encodings_data['names'].append(result['name'])
+                cls.encodings_data['image_paths'].append(
+                    result['image_path'])
 
     @classmethod
     def _retrain_model(cls):
@@ -108,7 +161,36 @@ class Trainer:
         #
         # See comment on this commit:
         # https://github.com/littlebee/shelly-bot/commit/1d18f1d26bdc0912bafb0fb7a3e480f88026a29d
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        os.system(f"python3 {dir_path}/retrain_model.py")
+        # dir_path = os.path.dirname(os.path.realpath(__file__))
+        # os.system(f"python3 {dir_path}/retrain_model.py")
+
+        untrained_file_paths = cls._find_untrained_file_paths()
+        num_untrained = len(untrained_file_paths)
+        print(f"found {num_untrained} untrained paths")
+        pool = mp.Pool(processes=NUM_PROCS)
+        result_queue = mp.Manager().Queue()
+        # prod_x has only one argument x (y is fixed to 10)
+        train_image_partial = partial(train_image, queue=result_queue)
+        async_map = pool.map_async(train_image_partial, untrained_file_paths)
+
+        while not async_map.ready():
+            result = None
+            try:
+                result = result_queue.get(True, .25)
+            except:
+                pass
+            cls._handle_retrain_result(result)
+
+        while not result_queue.empty():
+            cls._handle_retrain_result(result_queue.get())
+
+        async_map.wait()
+        pool.close()
+        pool.join()
         cls.last_retrain_duration = time.time() - time_started
-        cls._load_encodings_from_file()
+        cls.last_num_retrained = num_untrained
+        last_retrain_fps = num_untrained / cls.last_retrain_duration
+        print(
+            f"retraining complete.  duration={cls.last_retrain_duration} fps={last_retrain_fps} ")
+
+        cls._save_encodings_to_file()
