@@ -9,6 +9,7 @@ import sys
 import time
 import threading
 import pickle
+import numpy
 
 import multiprocessing as mp
 from imutils import paths as imutils_paths
@@ -16,8 +17,6 @@ from functools import partial
 
 from retrain_model import train_image
 import paths
-
-mp.set_start_method('spawn')
 
 # number of retrain processes to launch
 NUM_PROCS = 2
@@ -41,6 +40,10 @@ class Trainer:
     last_load_duration = 0
     # number of images last retrain
     last_num_retrained = 0
+
+    # multiprocessing worker pool and queue allocated at thread start
+    pool = None
+    result_queue = None
 
     def __init__(self):
         if Trainer.thread is None:
@@ -78,20 +81,32 @@ class Trainer:
             fps = cls.last_num_retrained / cls.last_retrain_duration
 
         return {
-            "lastLoadDuration": cls.last_load_duration,
-            "lastRetrainDuration": cls.last_retrain_duration,
-            "lastRetrainCount": cls.last_num_retrained,
-            "lastRetrainFps": fps
+            "lastLoad": {
+                "duration": cls.last_load_duration,
+            },
+            "lastRetrain": {
+                "duration": cls.last_retrain_duration,
+                "count": cls.last_num_retrained,
+                "fps": fps
+            },
+            "totals": {
+                "encodings": len(cls.encodings_data['encodings']),
+                "uniqueFaces": len(numpy.unique(numpy.array(cls.encodings_data['names']))),
+                "uniqueFiles": len(numpy.unique(numpy.array(cls.encodings_data['image_paths']))),
+            }
         }
 
     @classmethod
     def _thread(cls):
         print('Starting trainer thread.')
-        Trainer.started_at = time.time()
+        cls.started_at = time.time()
 
         # In case a retrain request comes in while loading...
-        Trainer.retrain_needed_event.clear()
-        Trainer._load_encodings_from_file()
+        cls.retrain_needed_event.clear()
+        cls._load_encodings_from_file()
+
+        cls.pool = mp.Pool(processes=NUM_PROCS)
+        cls.result_queue = mp.Manager().Queue()
 
         while True:
             cls.retrain_needed_event.wait()
@@ -167,26 +182,22 @@ class Trainer:
         untrained_file_paths = cls._find_untrained_file_paths()
         num_untrained = len(untrained_file_paths)
         print(f"found {num_untrained} untrained paths")
-        pool = mp.Pool(processes=NUM_PROCS)
-        result_queue = mp.Manager().Queue()
         # prod_x has only one argument x (y is fixed to 10)
-        train_image_partial = partial(train_image, queue=result_queue)
-        async_map = pool.map_async(train_image_partial, untrained_file_paths)
+        train_image_partial = partial(train_image, queue=cls.result_queue)
+        async_map = cls.pool.map_async(
+            train_image_partial, untrained_file_paths)
 
         while not async_map.ready():
             result = None
             try:
-                result = result_queue.get(True, .25)
+                result = cls.result_queue.get(True, .25)
             except:
                 pass
             cls._handle_retrain_result(result)
 
-        while not result_queue.empty():
-            cls._handle_retrain_result(result_queue.get())
+        while not cls.result_queue.empty():
+            cls._handle_retrain_result(cls.result_queue.get())
 
-        async_map.wait()
-        pool.close()
-        pool.join()
         cls.last_retrain_duration = time.time() - time_started
         cls.last_num_retrained = num_untrained
         last_retrain_fps = num_untrained / cls.last_retrain_duration

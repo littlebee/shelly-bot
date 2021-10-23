@@ -46,8 +46,9 @@ def train_image(image_path, queue):
 
     if queue:
         queue.put(encodings_data)
-
-    return encodings_data
+        return None
+    else:
+        return encodings_data
 
 
 if __name__ == '__main__':

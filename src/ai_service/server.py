@@ -13,6 +13,8 @@ import os
 import threading
 import json
 import psutil
+import multiprocessing
+
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
@@ -128,5 +130,7 @@ class webapp:
         thread.start()  # Thread starts
 
 
-flask_app = webapp()
-flask_app.start_thread()
+if __name__ == '__main__':
+    multiprocessing.set_start_method('spawn')
+    flask_app = webapp()
+    flask_app.start_thread()
