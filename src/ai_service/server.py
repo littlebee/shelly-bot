@@ -70,12 +70,22 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 @app.route('/stats')
 def send_stats():
+    (a0_temp, cpu_temp, gpu_temp, *rest) = [
+        int(i) / 1000 for i in
+        os.popen(
+            'cat /sys/devices/virtual/thermal/thermal_zone*/temp').read().split()
+    ]
     return json_response({
         "capture": BaseCamera.stats(),
         "faceDetect": FaceDetect.stats(),
         "system": {
             "cpuPercent": psutil.cpu_percent(),
             "ram": psutil.virtual_memory()[2],
+            "temp": {
+                "A0": a0_temp,
+                "CPU": cpu_temp,
+                "GPU": gpu_temp
+            }
         },
         "trainer": Trainer.stats()
     })
