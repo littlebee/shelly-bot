@@ -24,6 +24,7 @@ from camera_opencv import Camera
 from base_camera import BaseCamera
 from face_detect import FaceDetect
 from trainer import Trainer
+from acquirer import Acquirer
 
 
 app = Flask(__name__)
@@ -32,6 +33,7 @@ CORS(app, supports_credentials=True)
 camera = Camera()
 trainer = Trainer()
 face_detect = FaceDetect(camera, trainer)
+acquirer = Acquirer(camera)
 
 
 def gen(camera):
@@ -44,6 +46,7 @@ def gen(camera):
         frame = frame.copy()
         # add names and bounding boxes
         frame = face_detect.augment_frame(frame)
+        frame = acquirer.augment_frame(frame)
         jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
@@ -56,6 +59,20 @@ def json_response(data):
         mimetype='application/json'
     )
     return response
+
+
+def respond_ok(data=None):
+    return json_response({
+        "status": "ok",
+        "data": data
+    })
+
+
+def respond_not_ok(status, data):
+    return json_response({
+        "status": status,
+        "data": data
+    })
 
 
 @app.route('/video_feed')
@@ -94,25 +111,56 @@ def send_stats():
 @app.route('/pauseFaceDetect')
 def pause_face_detect():
     face_detect.pause()
-    return json_response({
-        "status": "paused"
-    })
+    return respond_ok()
 
 
 @app.route('/resumeFaceDetect')
 def resume_face_detect():
     face_detect.resume()
-    return json_response({
-        "status": "resumed"
-    })
+    return respond_ok()
 
 
 @app.route('/retrainModel')
-def retrainModel():
+def retrain_model():
     trainer.trigger_retrain()
-    return json_response({
-        "status": "ok"
-    })
+    return respond_ok()
+
+
+@app.route('/names')
+def names():
+    return respond_ok(acquirer.get_names())
+
+
+@app.route('/nextFaces')
+def next_faces():
+    return respond_ok(face_detect.get_next_faces())
+
+
+@app.route('/newFace')
+def new_face():
+    acquirer.new_face()
+    return respond_ok()
+
+
+@app.route('/acquireSpokenName')
+def acquire_spoken_name():
+    nameBin = acquirer.acquire_spoken_name()
+    if not nameBin:
+        return respond_not_ok('empty')
+
+    return respond_ok(nameBin)
+
+
+@app.route('/acquireImages')
+def acquire_images():
+    acquirer.acquire_images()
+    return respond_ok()
+
+
+@app.route('/saveNewFace')
+def save_new_face():
+    new_name = acquirer.save_new_face()
+    return respond_ok(new_name)
 
 
 @app.route('/<path:filename>')

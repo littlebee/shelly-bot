@@ -187,6 +187,8 @@ sudo pip3 install face-recognition imutils
 sudo pip3 install websockets flask flask_cors
 sudo pip3 install opencv-contrib-python
 sudo pip3 install pybase64 psutil
+# for removing silence from spoken name
+sudo pip3 install webrtcvad
 
 
 mkdir -p $TARGET_DIR/data
