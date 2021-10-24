@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-import sys
+import os
 import time
 import threading
 import random
 
 from adafruit_servokit import ServoKit
+
+DEBUG_MOTORS = os.getenv('DEBUG_MOTORS') or False
 
 # index in Head.motors
 PAN_MOTOR = 0
@@ -157,8 +159,9 @@ class Head:
                 current_angle = motor['current_angle']
                 dest_angle = motor['dest_angle']
                 direction = 1
-                print(
-                    f"motor {motor['channel']} current {current_angle} dest {dest_angle}")
+                if DEBUG_MOTORS:
+                    print(
+                        f"motor {motor['channel']} current {current_angle} dest {dest_angle}")
                 if current_angle > dest_angle:
                     direction = -1
                 would_overshoot = cls._step_would_overshoot_dest(
@@ -187,8 +190,10 @@ class Head:
         if current_angle == new_angle or current_angle == dest_angle:
             return
 
-        print(
-            f"stepping motor {motor['channel']}, {direction}, {current_angle}, {new_angle}")
+        if DEBUG_MOTORS:
+            print(
+                f"stepping motor {motor['channel']}, {direction}, {current_angle}, {new_angle}")
+
         servo_kit.servo[motor['channel']].angle = new_angle
         time.sleep(motor['step_delay'])
         motor['current_angle'] = new_angle

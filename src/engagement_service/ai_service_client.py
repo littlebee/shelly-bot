@@ -43,11 +43,14 @@ def get(endpoint):
 
 
 def get_names():
+    # gets all of the names and recorded spoken names
     started_at = time.time()
     resp = get('names')
 
+    # reset the data/names directory (rm and recreate)
     os.system(
         f"rm -Rf {paths.NAMES_DATA_DIR} && mkdir -p {paths.NAMES_DATA_DIR}")
+
     names = []
     for nameMeta in resp['data']:
         new_name = nameMeta['name']
