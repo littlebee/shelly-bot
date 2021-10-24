@@ -163,6 +163,11 @@ def save_new_face():
     return respond_ok(new_name)
 
 
+@app.route('/ping')
+def ping():
+    return respond_ok('pong')
+
+
 @app.route('/<path:filename>')
 def send_file(filename):
     return send_from_directory(dir_path, filename)

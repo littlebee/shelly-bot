@@ -22,12 +22,16 @@ FFMPEG_COMMAND = f"ffmpeg -i {paths.TMP_RAW_NAME_FILE} -af silenceremove=stop_pe
 # minimum number of bytes of mp3, after removing silence, that we will accept
 RECORDING_SIZE_MINIMUM = 2600
 
+# number of seconds to acquire images for per call
+ACQUIRE_IMAGES_DURATION = 5  # seconds
+# pause between taking pictures to have more variability of images
+ACQUIRE_IMAGES_SLEEP = .1
+
 
 class Acquirer:
     thread = None  # background thread that reads frames from camera
     camera = None
 
-    acquire_duration = 10  # seconds
     acquire_event = threading.Event()
     is_acquiring = False
 
@@ -119,15 +123,15 @@ class Acquirer:
             cls.acquire_event.clear()
             cls.is_acquiring = True
             print(
-                f"Acquiring images for new face for {cls.acquire_duration} seconds")
+                f"Acquiring images for new face for {ACQUIRE_IMAGES_DURATION} seconds")
             acquisition_started_at = time.time()
 
-            while time.time() - acquisition_started_at < cls.acquire_duration:
+            while time.time() - acquisition_started_at < ACQUIRE_IMAGES_DURATION:
                 # get frame, run face detection on it and update Acquirer.last_faces
                 frame = cls.camera.get_frame()
                 cls.save_image(frame)
                 # slow this down to max 10fps for more variation of images
-                time.sleep(.1)
+                time.sleep(ACQUIRE_IMAGES_SLEEP)
 
     @classmethod
     def save_image(cls, image):

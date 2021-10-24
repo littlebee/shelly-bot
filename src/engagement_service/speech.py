@@ -67,11 +67,11 @@ def async_cmd(cmd):
 
 
 def name_wav_file_path(name):
-    return f"data/faces/{name}/name.wav"
+    return f"{paths.NAMES_DATA_DIR}/{name}/name.mp3"
 
 
 def play_name_cmd(name):
-    return f"aplay {name_wav_file_path(name)}"
+    return f"mpg123 {name_wav_file_path(name)}"
 
 
 def play_name(name):

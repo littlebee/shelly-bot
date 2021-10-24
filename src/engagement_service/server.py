@@ -16,11 +16,6 @@ import psutil
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
 
-import cv2
-from camera_opencv import Camera
-from base_camera import BaseCamera
-from face_detect import FaceDetect
-from trainer import Trainer
 from head import Head
 from engagement import Engagement
 
@@ -28,32 +23,9 @@ from engagement import Engagement
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
-camera = Camera()
-face_detect = FaceDetect(camera)
-trainer = Trainer()
 head = Head()
 # this starts a thread that engages with the huuuumans
-engagement = Engagement(camera, face_detect, trainer, head)
-
-
-def gen(camera):
-    """Video streaming generator function."""
-    while True:
-        frame = camera.get_frame()
-        frame = frame.copy()
-        frame = face_detect.augment_frame(frame)
-        frame = engagement.augment_frame(frame)
-        jpeg = cv2.imencode('.jpg', frame)[1].tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
-
-
-@app.route('/video_feed')
-def video_feed():
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(camera),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
+engagement = Engagement(head)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -61,15 +33,11 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 @app.route('/stats')
 def send_stats():
     return {
-        "capture": BaseCamera.stats(),
         "engagement": Engagement.stats(),
-        "faceDetect": FaceDetect.stats(),
         "system": {
             "cpuPercent": psutil.cpu_percent(),
             "ram": psutil.virtual_memory()[2],
         },
-        "trainer": Trainer.stats()
-
     }
 
 
@@ -101,9 +69,6 @@ def index():
 
 
 class webapp:
-    def __init__(self):
-        self.camera = camera
-
     def thread(self):
         app.run(host='0.0.0.0', threaded=True)
 

@@ -1,10 +1,7 @@
 
-
 TMP_DATA_DIR = "data/engagement"
-TMP_RAW_NAME_FILE = f"{TMP_DATA_DIR}/raw-name.wav"
-TMP_NAME_FILE = f"{TMP_DATA_DIR}/name.wav"
+TMP_NAME_FILE = f"{TMP_DATA_DIR}/name.mp3"
 
-FACES_DATA_DIR = "data/faces"
+NAMES_DATA_DIR = "data/names"
 
-ENCODINGS_FILE_PATH = "data/encodings.pickle"
-TRAINER_PROCESSED_FILE_PATH = "data/faces_processed.json"
+AI_SERVICE_URL = "http://192.168.1.24:5000/"
