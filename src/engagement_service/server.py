@@ -12,6 +12,7 @@
 import os
 import threading
 import psutil
+import json
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
@@ -30,27 +31,36 @@ engagement = Engagement(head)
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
+def json_response(data):
+    response = app.response_class(
+        response=json.dumps(data),
+        status=200,
+        mimetype='application/json'
+    )
+    return response
+
+
 @app.route('/stats')
 def send_stats():
-    return {
+    return json_response({
         "engagement": Engagement.stats(),
         "system": {
             "cpuPercent": psutil.cpu_percent(),
             "ram": psutil.virtual_memory()[2],
         },
-    }
+    })
 
 
 @app.route('/pauseEngagement')
 def pause_engagement():
     Engagement.pause_engagement()
-    return {"status": "paused"}
+    return json_response({"status": "paused"})
 
 
 @app.route('/resumeEngagement')
 def resume_engagement():
     Engagement.resume_engagement()
-    return {"status": "resumed"}
+    return json_response({"status": "resumed"})
 
 
 @app.route('/centerHead')

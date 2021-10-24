@@ -160,6 +160,7 @@ def acquire_images():
 @app.route('/saveNewFace')
 def save_new_face():
     new_name = acquirer.save_new_face()
+    trainer.trigger_retrain()
     return respond_ok(new_name)
 
 

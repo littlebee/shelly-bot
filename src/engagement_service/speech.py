@@ -75,6 +75,7 @@ def play_name_cmd(name):
 
 
 def play_name(name):
+    print(f"play_name: {name}")
     os.system(play_name_cmd(name))
 
 
@@ -87,10 +88,12 @@ def espeak_cmd(text):
 
 
 def say(text):
+    print(f"say: {text}")
     os.system(espeak_cmd(text))
 
 
 def say_async(text):
+    print(f"say_async: {text}")
     async_cmd(espeak_cmd(text))
 
 
@@ -173,8 +176,20 @@ def i_need_a_nap():
     say("I'm tired and need to nap now.")
 
 
+_last_time_malfunction = time.time()
+MIN_MALFUNCTION_DELAY = 20
+
+
+def brain_malfunction():
+    global _last_time_malfunction
+    current_time = time.time()
+    if current_time - _last_time_malfunction > MIN_MALFUNCTION_DELAY:
+        _last_time_malfunction = current_time
+        say("I seem to be having difficulty talking to my brain. Need Reboot. Need Reboot.")
+
+
 _last_time_bored = time.time()
-MIN_BORED_DELAY = 20
+MIN_BORED_DELAY = 40
 
 
 def im_bored():

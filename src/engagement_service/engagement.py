@@ -19,7 +19,7 @@ import paths
 import speech
 
 import ai_service_client as ai
-# from sensors import camera_distance
+from sensors import camera_distance
 
 # in meters
 MAX_DISTANCE_TO_ENGAGE = 1
@@ -93,70 +93,18 @@ class Engagement:
                 cls.run_event.wait()
 
             cls.status = "getting new faces"
-            next_faces_resp = ai.get_next_faces()
-            if not next_faces_resp:
-                # would only not work if the ai service is down
-                # give it a rest and try again
-                time.sleep(SLEEP_ON_SERVICE_ERROR)
-                continue
-
-            next_faces = next_faces_resp['data']
-            num_next_faces = len(next_faces)
-            print(
-                f"engagement thread: got {num_next_faces} next faces: {next_faces}")
-
-            num_known_faces = 0
-            unknown_faces = []
-            for next_face in next_faces:
-                name = next_face['name']
-                if name == 'unknown':
-                    # ignore faces in the distance; we only care about
-                    # those in range based on min area threshold
-                    top, right, bottom, left = next_face["aabb"]
-                    area = (bottom - top) * (right-left)
-                    if area > FACE_AREA_THRESHOLD:
-                        unknown_faces.append(next_face)
-                    else:
-                        print(
-                            f"engagement thread: unknown face out of range: {area}sq aabb:{next_face['aabb']} ")
-                else:
-                    num_known_faces += 1
-                    print(f"engagement thread: greeting {name}")
-                    speech.say_hello([name])
-
-            num_unknown_faces = len(unknown_faces)
-            print(
-                f"engagement thread: found {num_known_faces} known faces and {num_unknown_faces} unknown faces within range")
-
-            if num_unknown_faces > 0 and num_unknown_faces <= MAX_UNKNOWNS_TO_ENGAGE:
+            if cls.is_unknown_face():
                 cls.engage_new_face()
-            #
-
-            #     single_unknown = num_new_faces == 1 and num_names == 0
-            #     if camera_distance() <= MAX_DISTANCE_TO_ENGAGE:
-            #         if single_unknown:
-            #             cls.engagement_face = new_faces[0]
-            #             cls.status = "engaging"
-            #             cls.engage_new_face(new_faces[0], frame)
-            #         elif num_names == 1:
-            #             if not last_chatted_with or last_chatted_with != names[0]:
-            #                 last_chatted_with = names[0]
-            #                 speech.tell_me_a_funny_story(names[0])
-            #     elif num_names > 0:
-            #         cls.last_recognized_at = time.time()
-            #         cls.recognized_faces += num_names
-            #     else:
-            #         speech.im_bored()
-            #         cls.head.scan()
-            # else:
-            #     speech.im_bored()
-            #     cls.head.scan()
+            else:
+                speech.im_bored()
+                cls.head.scan()
 
             time.sleep(0.1)
 
     @ classmethod
     def engage_new_face(cls):
         print(f"engagement service: Engaging new face")
+        ai.get_new_face()
         speech.introduce_yourself()
         if not ai.get_spoken_name():
             speech.request_name_again()
@@ -167,39 +115,72 @@ class Engagement:
         speech.let_me_get_a_look_at_you()
 
         for i in range(0, 3):
-            if not cls.is_still_unknown_face():
+            if not cls.is_unknown_face(greet_known=False):
                 speech.where_did_you_go()
-                if not cls.is_still_unknown_face():
+                if not cls.is_unknown_face(greet_known=False):
                     speech.rejection()
                     return
+
+            if not ai.get_images():
+                speech.brain_malfunction()
+                return
 
             print(f"capturing images. round {i}")
             speech.pose_for_me()
             speech.play_camera_snap()
-            cls.save_frames(20)
+            time.sleep(1)
+
+        name = ai.get_save_face()
+        if not name:
+            speech.brain_malfunction()
+            return
 
         speech.and_im_spent()
-        name = cls.create_face_files()
         speech.nice_to_meet_you(name)
 
         time.sleep(4)
         speech.i_need_a_nap()
         cls.head.sleep()
 
-        cls.trainer.trigger_retrain()
-        cls.status = "retraining"
-        time.sleep(20)
+        time.sleep(5)
 
     @ classmethod
-    def is_still_unknown_face(cls):
-        new_faces = cls.face_detect.get_next_faces()
-        frame = cls.face_detect.last_frame
-        speech.play_camera_snap()
-        if len(new_faces) == 1:
-            cls.engagement_face = new_faces[0]
-            names = cls.get_names_for_faces(new_faces, frame)
-            # we need a single unrecognized face
-            if len(names) == 0:
-                return camera_distance() <= MAX_DISTANCE_TO_ENGAGE
+    def is_unknown_face(cls, greet_known=True):
+        next_faces_resp = ai.get_next_faces()
+        if not next_faces_resp:
+            speech.brain_malfunction()
+            # would only not work if the ai service is down
+            # give it a rest and try again
+            time.sleep(SLEEP_ON_SERVICE_ERROR)
+            return None
 
-        return False
+        next_faces = next_faces_resp['data']
+        num_unknown_faces = cls.get_number_unknown(next_faces, greet_known)
+        return num_unknown_faces > 0 and num_unknown_faces <= MAX_UNKNOWNS_TO_ENGAGE
+
+    @classmethod
+    def get_number_unknown(cls, next_faces, greet_known=False):
+        num_known_faces = 0
+        num_unknown_faces = 0
+        for next_face in next_faces:
+            name = next_face['name']
+            if name == 'unknown':
+                # ignore faces in the distance; we only care about
+                # those in range based on min area threshold
+                top, right, bottom, left = next_face["aabb"]
+                area = (bottom - top) * (right-left)
+                if area > FACE_AREA_THRESHOLD:
+                    num_unknown_faces += 1
+                else:
+                    print(
+                        f"engagement thread: unknown face out of range: {area}sq aabb:{next_face['aabb']} ")
+            else:
+                num_known_faces += 1
+                if greet_known:
+                    speech.say_hello([name])
+
+        if num_known_faces + num_unknown_faces > 0:
+            print(
+                f"engagement thread: found {num_known_faces} known faces and {num_unknown_faces} unknown faces within range")
+
+        return num_unknown_faces

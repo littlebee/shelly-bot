@@ -36,7 +36,7 @@ class FaceDetect:
     last_dimensions = {}
     total_faces_detected = 0
 
-    detected_event = threading.Event()
+    next_faces_event = threading.Event()
     pause_event = threading.Event()
 
     def __init__(self, camera, trainer):
@@ -50,8 +50,8 @@ class FaceDetect:
         return FaceDetect.last_faces
 
     def get_next_faces(self):
-        FaceDetect.detected_event.wait()
-        FaceDetect.detected_event.clear()
+        FaceDetect.next_faces_event.wait()
+        FaceDetect.next_faces_event.clear()
         return self.get_faces()
 
     def augment_frame(self, frame):
@@ -115,9 +115,8 @@ class FaceDetect:
             cls.last_dimensions = cls.last_frame.shape
 
             num_faces = len(cls.last_faces)
-            if num_faces > 0:
-                cls.detected_event.set()  # send signal to clients
-                cls.total_faces_detected += num_faces
+            cls.next_faces_event.set()  # send signal to clients
+            cls.total_faces_detected += num_faces
 
             time.sleep(0)
 
