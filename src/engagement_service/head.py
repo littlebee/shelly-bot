@@ -153,7 +153,6 @@ class Head:
         cls.pause_event.set()
         while not cls.force_stop:
             cls.pause_event.wait()
-            print("moving head")
             did_move = False
             for motor in cls.motors:
                 current_angle = motor['current_angle']
