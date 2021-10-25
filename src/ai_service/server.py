@@ -208,6 +208,5 @@ def start_app():
     logger = logging.getLogger(__name__)
     logger.info('ai_service started')
 
-    multiprocessing.set_start_method('spawn')
     flask_app = webapp()
     flask_app.start_thread()
