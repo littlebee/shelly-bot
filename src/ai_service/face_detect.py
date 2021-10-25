@@ -20,15 +20,13 @@ import face_recognition
 
 from common.fps_stats import FpsStats
 
+logger = logging.getLogger(__name__)
 
 # if true, use face_recognition.face_distance to determin known faces
 USE_FACE_DISTANCE = os.getenv('USE_FACE_DISTANCE') == '1' or False
 
 if USE_FACE_DISTANCE:
     logger.info('Using face_distance to determine known faces')
-
-
-logger = logging.getLogger(__name__)
 
 
 class FaceDetect:
