@@ -1,22 +1,24 @@
 # /usr/bin/env python3
 import os
 import time
-import json
-import pickle
+import logging
+
 import cv2
 import face_recognition
 
 import multiprocessing as mp
 from imutils import paths as imutils_paths
 
-import paths
+from ai_service import paths
+
+logger = logging.getLogger(__name__)
 
 
 def train_images(image_paths, queue):
     returnVal = []
     for image_path in image_paths:
         returnVal.append(train_image(image_path, queue=queue))
-    print(f"train_images: {returnVal}")
+    logger.info(f"train_images: {returnVal}")
     return returnVal
 
 
@@ -30,7 +32,7 @@ def train_image(image_path, queue):
         "image_path": image_path
     }
 
-    print(f"train_image: {image_path}")
+    logger.info(f"train_image: {image_path}")
     image = cv2.imread(image_path)
     face_locations = face_recognition.face_locations(image)
     for top, right, bottom, left in face_locations:
@@ -60,18 +62,18 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
 
     if os.getenv('USE_MP_POOL') == '1':
-        print(f"Using multiprocessing pool with {num_procs} processes")
+        logger.info(f"Using multiprocessing pool with {num_procs} processes")
         with mp.Pool(num_procs) as p:
             p.map(train_image, image_paths)
 
     elif os.getenv('USE_DIRECT_CALL') == '1':
-        print('Using direct call for this process')
+        logger.info('Using direct call for this process')
         train_images(image_paths)
 
     else:
         num_images = len(image_paths)
 
-        print(f"Using {num_procs} processes (sans pool)")
+        logger.info(f"Using {num_procs} processes (sans pool)")
 
         imgs_per_chunk = int(num_images / num_procs)
         leftover_images = num_images % num_procs
@@ -79,12 +81,12 @@ if __name__ == '__main__':
         for i in range(num_procs):
             chunk_start = i * imgs_per_chunk
             chunk = image_paths[chunk_start:chunk_start + imgs_per_chunk]
-            print(f"chunk: {chunk}")
+            logger.info(f"chunk: {chunk}")
             chunks.append(chunk)
         chunks[0] = chunks[0] + image_paths[num_images - leftover_images:]
 
         chunk_lengths = list(map(lambda chunk: len(chunk), chunks))
-        print(f"chunk lengths: {chunk_lengths}")
+        logger.info(f"chunk lengths: {chunk_lengths}")
 
         processes = []
         for i in range(num_procs):
@@ -97,5 +99,5 @@ if __name__ == '__main__':
 
     total_time = time.time() - started_at
     num_image_paths = len(image_paths)
-    print(
+    logger.info(
         f"\nprocessed {num_image_paths} in {total_time}s  ({num_image_paths / total_time})")

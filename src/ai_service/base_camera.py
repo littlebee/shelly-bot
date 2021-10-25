@@ -9,8 +9,11 @@ https://github.com/adeept/Adeept_RaspTank/blob/a6c45e8cc7df620ad8977845eda2b8396
 """
 import time
 import threading
+import logging
 
-from fps_stats import FpsStats
+from common.fps_stats import FpsStats
+
+logger = logging.getLogger(__name__)
 
 
 class BaseCamera(object):
@@ -51,7 +54,7 @@ class BaseCamera(object):
     @classmethod
     def _thread(cls):
         """Camera background thread."""
-        print('Starting camera thread.')
+        logger.info('Starting camera thread.')
         BaseCamera.fps_stats.start()
 
         frames_iterator = cls.frames()

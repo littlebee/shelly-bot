@@ -14,17 +14,20 @@ import threading
 import json
 import psutil
 import multiprocessing
+import logging
 
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
 
 import cv2
-from camera_opencv import Camera
-from base_camera import BaseCamera
-from face_detect import FaceDetect
-from trainer import Trainer
-from acquirer import Acquirer
+
+from common.setup_logging import setup_logging
+from ai_service.camera_opencv import Camera
+from ai_service.base_camera import BaseCamera
+from ai_service.face_detect import FaceDetect
+from ai_service.trainer import Trainer
+from ai_service.acquirer import Acquirer
 
 
 app = Flask(__name__)
@@ -200,7 +203,11 @@ class webapp:
         thread.start()  # Thread starts
 
 
-if __name__ == '__main__':
+def start_app():
+    setup_logging('ai.log')
+    logger = logging.getLogger(__name__)
+    logger.info('ai_service started')
+
     multiprocessing.set_start_method('spawn')
     flask_app = webapp()
     flask_app.start_thread()

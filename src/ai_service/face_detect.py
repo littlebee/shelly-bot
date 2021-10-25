@@ -14,17 +14,21 @@ import threading
 import cv2
 from face_recognition.api import face_distance
 import numpy
+import logging
 
-# import faces
 import face_recognition
-from fps_stats import FpsStats
+
+from common.fps_stats import FpsStats
 
 
 # if true, use face_recognition.face_distance to determin known faces
 USE_FACE_DISTANCE = os.getenv('USE_FACE_DISTANCE') == '1' or False
 
 if USE_FACE_DISTANCE:
-    print('Using face_distance to determine known faces')
+    logger.info('Using face_distance to determine known faces')
+
+
+logger = logging.getLogger(__name__)
 
 
 class FaceDetect:
@@ -88,7 +92,7 @@ class FaceDetect:
 
     @classmethod
     def _thread(cls):
-        print('Starting face detection thread.')
+        logger.info('Starting face detection thread.')
         cls.fps_stats.start()
 
         # start running on start
@@ -157,6 +161,6 @@ class FaceDetect:
                 "aabb": new_faces[index]
             })
 
-        print(f"found faces: {named_faces}")
+        logger.info(f"found faces: {named_faces}")
 
         return named_faces

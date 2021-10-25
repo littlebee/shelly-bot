@@ -8,15 +8,16 @@ A thread is created that does the heavy lifting of detecting faces and updates
 a class var that contains the last faces detected. This allows the thread providing
 the video feed to stream at 30fps while face frames lag behind at 3fps (maybe upto 10?)
 """
-from logging import Logger
 import os
 import time
 import threading
 import base64
 import glob
+import logging
 import cv2
 
-import paths
+
+from ai_service import paths
 
 RECORD_COMMAND = f"arecord -d 3 -D hw:2,0 -c 2 -r 32000 -f S16_LE {paths.TMP_RAW_NAME_FILE}"
 FFMPEG_COMMAND = f"ffmpeg -i {paths.TMP_RAW_NAME_FILE} -af silenceremove=stop_periods=-1:stop_duration=0.1:stop_threshold=-40dB -y {paths.TMP_NAME_FILE}"
@@ -27,6 +28,8 @@ RECORDING_SIZE_MINIMUM = 2600
 ACQUIRE_IMAGES_DURATION = 5  # seconds
 # pause between taking pictures to have more variability of
 ACQUIRE_IMAGES_SLEEP = .1
+
+logger = logging.getLogger(__name__)
 
 
 class Acquirer:
@@ -58,12 +61,12 @@ class Acquirer:
     def get_names(self):
         names = []
         for path in glob.iglob(f"{paths.FACES_DATA_DIR}/**/name.mp3"):
-            print(f"got path {path}")
+            logger.info(f"got path {path}")
             name = path.split(os.path.sep)[-2]
             content = None
             with open(path, 'rb') as file:
                 content = file.read()
-                print(f"read {len(content)}bytes of mp3")
+                logger.info(f"read {len(content)}bytes of mp3")
                 b64bytes = base64.b64encode(content)
                 content = b64bytes.decode()
 
@@ -83,12 +86,12 @@ class Acquirer:
 
     def acquire_spoken_name(self):
         cmd = f"{RECORD_COMMAND} && {FFMPEG_COMMAND}"
-        print(f"acquire_spoken_name: $ {cmd}")
+        logger.info(f"acquire_spoken_name: $ {cmd}")
         os.system(cmd)
         with open(paths.TMP_NAME_FILE, 'rb') as file:
             content = file.read()
             length = len(content)
-            print(f"acquired {length}bytes of mp3")
+            logger.info(f"acquired {length}bytes of mp3")
             if length < RECORDING_SIZE_MINIMUM:
                 return None
 
@@ -116,7 +119,7 @@ class Acquirer:
 
     @classmethod
     def _thread(cls):
-        print('Starting acquisition thread.')
+        logger.info('Starting acquisition thread.')
 
         acquisition_started_at = 0
 
@@ -125,7 +128,7 @@ class Acquirer:
             cls.acquire_event.wait()
             cls.acquire_event.clear()
             cls.is_acquiring = True
-            print(
+            logger.info(
                 f"Acquiring images for new face for {ACQUIRE_IMAGES_DURATION} seconds")
             acquisition_started_at = time.time()
 
@@ -140,6 +143,6 @@ class Acquirer:
     def save_image(cls, image):
         path = f"{paths.TMP_DATA_DIR}/frame_{cls.new_frames_saved}.jpg"
         cv2.imwrite(path, image)
-        print(f"saved face {path}")
+        logger.info(f"saved face {path}")
 
         cls.new_frames_saved += 1

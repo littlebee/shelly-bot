@@ -10,8 +10,11 @@
 
 import os
 import cv2
+import logging
 
-from base_camera import BaseCamera
+from ai_service.base_camera import BaseCamera
+
+logger = logging.getLogger(__name__)
 
 
 class Camera(BaseCamera):
@@ -29,7 +32,7 @@ class Camera(BaseCamera):
 
     @staticmethod
     def frames():
-        print('initializing VideoCapture')
+        logger.info('initializing VideoCapture')
 
         camera = cv2.VideoCapture(
             Camera.video_source)  # , apiPreference=cv2.CAP_V4L2)
@@ -43,9 +46,9 @@ class Camera(BaseCamera):
             _, img = camera.read()
             if img is None:
                 if not Camera.img_is_none_messaged:
-                    print(
+                    logger.error(
                         "The camera has not read data, please check whether the camera can be used normally.")
-                    print(
+                    logger.error(
                         "Use the command: 'raspistill -t 1000 -o image.jpg' to check whether the camera can be used correctly.")
                     Camera.img_is_none_messaged = True
                 continue

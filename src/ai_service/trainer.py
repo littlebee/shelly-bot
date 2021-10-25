@@ -10,16 +10,19 @@ import time
 import threading
 import pickle
 import numpy
+import logging
 
 import multiprocessing as mp
 from imutils import paths as imutils_paths
 from functools import partial
 
-from retrain_model import train_image
-import paths
+from ai_service.retrain_model import train_image
+from ai_service import paths
 
 # number of retrain processes to launch
 NUM_PROCS = 2
+
+logger = logging.getLogger(__name__)
 
 
 def default_encodings_data():
@@ -106,7 +109,7 @@ class Trainer:
 
     @classmethod
     def _thread(cls):
-        print('Starting trainer thread.')
+        logger.info('Starting trainer thread.')
         cls.started_at = time.time()
 
         # In case a retrain request comes in while loading...
@@ -134,14 +137,14 @@ class Trainer:
             cls.encodings_data = new_encodings_data
             cls.last_load_duration = time.time() - time_started
 
-            print(
+            logger.info(
                 f"Trainer updated from {paths.ENCODINGS_FILE_PATH} in {cls.last_load_duration}s")
-        print(
+        logger.info(
             f"loaded {len(cls.encodings_data['encodings'])} encodings, {len(cls.encodings_data['names'])} names, and {len(cls.encodings_data['image_paths'])} image paths")
 
     @classmethod
     def _save_encodings_to_file(cls):
-        print(
+        logger.info(
             f"saving {len(cls.encodings_data['encodings'])} encodings, {len(cls.encodings_data['names'])} names, and {len(cls.encodings_data['image_paths'])} image paths")
         with open(paths.ENCODINGS_FILE_PATH, 'wb') as fp:
             pickle.dump(cls.encodings_data, fp,
@@ -161,7 +164,7 @@ class Trainer:
         if not result:
             return
 
-        print(
+        logger.info(
             f"got result from queue with {len(result['encodings'])} encodings for {result['name']} at {result['image_path']}")
 
         if len(result['encodings']) == 0:
@@ -189,7 +192,7 @@ class Trainer:
 
         untrained_file_paths = cls._find_untrained_file_paths()
         num_untrained = len(untrained_file_paths)
-        print(f"found {num_untrained} untrained paths")
+        logger.info(f"found {num_untrained} untrained paths")
         # prod_x has only one argument x (y is fixed to 10)
         train_image_partial = partial(train_image, queue=cls.result_queue)
         async_map = cls.pool.map_async(
@@ -209,7 +212,7 @@ class Trainer:
         cls.last_retrain_duration = time.time() - time_started
         cls.last_num_retrained = num_untrained
         last_retrain_fps = num_untrained / cls.last_retrain_duration
-        print(
+        logger.info(
             f"retraining complete.  duration={cls.last_retrain_duration} fps={last_retrain_fps} ")
 
         cls._save_encodings_to_file()
