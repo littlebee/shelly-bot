@@ -2,12 +2,15 @@
 
 This class provides methods for speaking to the humans.
 """
+from engagement_service import paths
 import os
 import time
 import subprocess
 import random
+import logging
 
-import paths
+logger = logging.getLogger(__name__)
+
 
 ESPEAK_CMD = "espeak -v en+f2"
 ESPEAK_AFFIX = "--stdout | aplay"
@@ -75,7 +78,7 @@ def play_name_cmd(name):
 
 
 def play_name(name):
-    print(f"play_name: {name}")
+    logger.info(f"play_name: {name}")
     os.system(play_name_cmd(name))
 
 
@@ -88,12 +91,12 @@ def espeak_cmd(text):
 
 
 def say(text):
-    print(f"say: {text}")
+    logger.info(f"say: {text}")
     os.system(espeak_cmd(text))
 
 
 def say_async(text):
-    print(f"say_async: {text}")
+    logger.info(f"say_async: {text}")
     async_cmd(espeak_cmd(text))
 
 
@@ -135,7 +138,7 @@ def say_hello(names):
     if greeting[1]:
         say(greeting[1])
 
-    print(f"greeted {names_to_greet}")
+    logger.info(f"greeted {names_to_greet}")
 
 
 def introduce_yourself():
@@ -159,7 +162,7 @@ def pose_for_me():
 
 
 def and_im_spent():
-    say_async("...and I'm spent.")
+    say("...and I'm spent.")
 
 
 def nice_to_meet_you(name):

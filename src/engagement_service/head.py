@@ -4,6 +4,7 @@ import os
 import time
 import threading
 import random
+import logging
 
 from adafruit_servokit import ServoKit
 
@@ -31,6 +32,7 @@ MIN_SCAN_DELAY = 10
 
 
 servo_kit = ServoKit(channels=16)
+logger = logging.getLogger(__name__)
 
 
 def limit_angle(motor, angle):
@@ -141,7 +143,7 @@ class Head:
 
     @classmethod
     def _thread(cls):
-        print('Starting head movement thread.')
+        logger.info('Starting head movement thread.')
         cls.started_at = time.time()
 
         # have to directly set the first angles so we know
@@ -159,7 +161,7 @@ class Head:
                 dest_angle = motor['dest_angle']
                 direction = 1
                 if DEBUG_MOTORS:
-                    print(
+                    logger.info(
                         f"motor {motor['channel']} current {current_angle} dest {dest_angle}")
                 if current_angle > dest_angle:
                     direction = -1
@@ -190,7 +192,7 @@ class Head:
             return
 
         if DEBUG_MOTORS:
-            print(
+            logger.info(
                 f"stepping motor {motor['channel']}, {direction}, {current_angle}, {new_angle}")
 
         servo_kit.servo[motor['channel']].angle = new_angle
@@ -213,14 +215,14 @@ if __name__ == '__main__':
 
     try:
         while True:
-            print('Ctrl+c to quit')
+            logger.info('Ctrl+c to quit')
             for motor in Head.motors:
                 test_angles = [motor['min_angle'],
                                motor['max_angle'], motor['center_angle']]
                 for angle in test_angles:
-                    print(f"channel {motor['channel']} to {angle}deg")
+                    logger.info(f"channel {motor['channel']} to {angle}deg")
                     head.move_to(motor, angle)
-                    print(f"waiting for motor stopped event")
+                    logger.info(f"waiting for motor stopped event")
                     head.wait_for_motor_stopped(motor)
 
     except KeyboardInterrupt:

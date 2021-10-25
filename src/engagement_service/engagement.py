@@ -11,15 +11,16 @@ their name and images of them to be used to retrain the ML model.
 Unless the above info gathering process is running, give shout outs to any
 new_faces that are recognized and identified from previous gathering + retraining .
 """
-import os
+import sys
 import time
 import threading
+import logging
 
-import paths
-import speech
+from engagement_service import speech
+from engagement_service import ai_service_client as ai
 
-import ai_service_client as ai
-from sensors import camera_distance
+logger = logging.getLogger(__name__)
+
 
 # in meters
 MAX_DISTANCE_TO_ENGAGE = 1
@@ -79,12 +80,15 @@ class Engagement:
 
     @ classmethod
     def _thread(cls):
-        print('Starting engagement thread.')
+        logger.info('Starting thread.')
         cls.started_at = time.time()
         cls.run_event.set()
 
-        print('engagement thread: getting names...')
-        ai.get_names()
+        logger.info('getting names...')
+
+        while not ai.get_names():
+            speech.brain_malfunction()
+            time.sleep(.25)
 
         while True:
             if not cls.run_event.is_set():
@@ -103,7 +107,7 @@ class Engagement:
 
     @ classmethod
     def engage_new_face(cls):
-        print(f"engagement service: Engaging new face")
+        logger.info(f"Engaging new face")
         ai.get_new_face()
         speech.introduce_yourself()
         if not ai.get_spoken_name():
@@ -125,7 +129,7 @@ class Engagement:
                 speech.brain_malfunction()
                 return
 
-            print(f"capturing images. round {i}")
+            logger.info(f"capturing images. round {i}")
             speech.pose_for_me()
             speech.play_camera_snap()
             time.sleep(1)
@@ -142,7 +146,7 @@ class Engagement:
         speech.i_need_a_nap()
         cls.head.sleep()
 
-        time.sleep(5)
+        time.sleep(15)
 
     @ classmethod
     def is_unknown_face(cls, greet_known=True):
@@ -172,15 +176,16 @@ class Engagement:
                 if area > FACE_AREA_THRESHOLD:
                     num_unknown_faces += 1
                 else:
-                    print(
-                        f"engagement thread: unknown face out of range: {area}sq aabb:{next_face['aabb']} ")
+                    logger.info(
+                        f"unknown face out of range: {area}sq aabb:{next_face['aabb']} ")
             else:
                 num_known_faces += 1
                 if greet_known:
                     speech.say_hello([name])
 
         if num_known_faces + num_unknown_faces > 0:
-            print(
-                f"engagement thread: found {num_known_faces} known faces and {num_unknown_faces} unknown faces within range")
-
+            logger.info(
+                f"found {num_known_faces} known faces and {num_unknown_faces} unknown faces within range")
+        else:
+            logger.debug('found no faces. :(')
         return num_unknown_faces

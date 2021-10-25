@@ -16,9 +16,10 @@ TARGET_HOST=$1
 ssh $TARGET_HOST "mkdir -p $TARGET_DIR"
 
 scp -r ./src/engagement_service $TARGET_HOST:$TARGET_DIR
+scp -r ./src/common $TARGET_HOST:$TARGET_DIR
 scp -r ./util $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin $TARGET_HOST:$TARGET_DIR
 scp -r ./media $TARGET_HOST:$TARGET_DIR
-scp -r ./run-engagement.sh $TARGET_HOST:$TARGET_DIR
 
+scp -r ./run-engagement.py $TARGET_HOST:$TARGET_DIR
 scp -r ./sbin/setup/engagement.sh $TARGET_HOST:$TARGET_DIR/setup-engagement.sh

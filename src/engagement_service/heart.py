@@ -11,9 +11,11 @@ the video feed to stream at 30fps while face frames lag behind at 3fps (maybe up
 import sys
 import time
 import threading
+import logging
 
 from rpi_ws281x import PixelStrip
 
+logger = logging.getLogger(__name__)
 
 PINK = (168, 50, 105)
 RED = (255, 0, 0)
@@ -85,11 +87,11 @@ class Heart:
 
     @classmethod
     def _thread(cls):
-        print('Starting heart thread.')
+        logger.info('Starting heart thread.')
         cls.started_at = time.time()
 
         while True:
-            # print(f"heart bpm: {cls.bpm}")
+            # logger.info(f"heart bpm: {cls.bpm}")
             bps = cls.bpm / 60
 
             if cls.next_color != cls.color:

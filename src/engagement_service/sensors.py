@@ -1,5 +1,5 @@
 
-from hardware.adeept_ultrasonic import get_distance
+from common.hardware.adeept_ultrasonic import get_distance
 
 
 # returns float in meters

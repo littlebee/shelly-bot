@@ -10,15 +10,18 @@
 """
 
 import os
+import sys
 import threading
 import psutil
 import json
+import logging
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
 
-from head import Head
-from engagement import Engagement
+from common.setup_logging import setup_logging
+from engagement_service.engagement import Engagement
+from engagement_service.head import Head
 
 
 app = Flask(__name__)
@@ -90,5 +93,10 @@ class webapp:
         fps_threading.start()  # Thread starts
 
 
-flask_app = webapp()
-flask_app.startthread()
+def start_app():
+    setup_logging('engagement.log')
+    logger = logging.getLogger(__name__)
+    logger.info("app started")
+
+    flask_app = webapp()
+    flask_app.startthread()

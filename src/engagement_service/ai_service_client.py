@@ -3,38 +3,43 @@ import time
 import requests
 import base64
 import traceback
-import paths
+import logging
+
+from engagement_service import paths
 
 DEBUG_REQUESTS = os.getenv('DEBUG_REQUESTS') or False
 DEBUG_RESPONSES = os.getenv('DEBUG_RESPONSES') or False
+
+logger = logging.getLogger(__name__)
 
 
 def get(endpoint):
     url = f"{paths.AI_SERVICE_URL}{endpoint}"
     if DEBUG_REQUESTS:
-        print(f"ai client: requesting {url}")
+        logger.info(f"requesting {url}")
     started_at = time.time()
     try:
         r = requests.get(url)
+
+        request_duration = time.time() - started_at
+        resp = r.json()
+        status = resp['status']
+        if DEBUG_REQUESTS or DEBUG_RESPONSES:
+            msg_data = {
+                'url': url,
+                'request_duration': request_duration,
+                'total_duration': time.time() - started_at,
+                'status': status,
+            }
+            if DEBUG_RESPONSES:
+                msg_data['data'] = resp['data']
+
+            logger.info(f"got response. {msg_data}")
+
     except Exception as e:
-        print('ai client: caught error on requests.get')
-        print(traceback.format_exc())
+        logger.error('caught error on requests.get')
+        logger.error(traceback.format_exc())
         return None
-
-    request_duration = time.time() - started_at
-    resp = r.json()
-    status = resp['status']
-    if DEBUG_REQUESTS or DEBUG_RESPONSES:
-        msg_data = {
-            'url': url,
-            'request_duration': request_duration,
-            'total_duration': time.time() - started_at,
-            'status': status,
-        }
-        if DEBUG_RESPONSES:
-            msg_data['data'] = resp['data']
-
-        print(f"got response. {msg_data}")
 
     if is_error_resp(resp, f"failed to get {endpoint}"):
         return None
@@ -46,6 +51,8 @@ def get_names():
     # gets all of the names and recorded spoken names
     started_at = time.time()
     resp = get('names')
+    if not resp:
+        return False
 
     # reset the data/names directory (rm and recreate)
     os.system(
@@ -60,7 +67,8 @@ def get_names():
         names.append(new_name)
 
     duration = time.time() - started_at
-    print(f"ai client: fetched and saved {len(names)} names in {duration}s")
+    logger.info(
+        f"fetched and saved {len(names)} names in {duration}s")
     return names
 
 
@@ -110,7 +118,8 @@ def get_ping():
 
 def is_error_resp(resp, log_msg):
     if not resp or resp['status'] != 'ok':
-        print(f"ai client: {log_msg}.  status: {resp and resp['status']}")
+        logger.error(
+            f"{log_msg}.  status: {resp and resp['status']}")
         return True
 
     return False

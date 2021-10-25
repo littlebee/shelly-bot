@@ -8,6 +8,7 @@ A thread is created that does the heavy lifting of detecting faces and updates
 a class var that contains the last faces detected. This allows the thread providing
 the video feed to stream at 30fps while face frames lag behind at 3fps (maybe upto 10?)
 """
+from logging import Logger
 import os
 import time
 import threading
@@ -24,7 +25,7 @@ RECORDING_SIZE_MINIMUM = 2600
 
 # number of seconds to acquire images for per call
 ACQUIRE_IMAGES_DURATION = 5  # seconds
-# pause between taking pictures to have more variability of images
+# pause between taking pictures to have more variability of
 ACQUIRE_IMAGES_SLEEP = .1
 
 
@@ -81,7 +82,9 @@ class Acquirer:
         os.system(f"mkdir -p {paths.TMP_DATA_DIR}")
 
     def acquire_spoken_name(self):
-        os.system(f"{RECORD_COMMAND} && {FFMPEG_COMMAND}")
+        cmd = f"{RECORD_COMMAND} && {FFMPEG_COMMAND}"
+        print(f"acquire_spoken_name: $ {cmd}")
+        os.system(cmd)
         with open(paths.TMP_NAME_FILE, 'rb') as file:
             content = file.read()
             length = len(content)

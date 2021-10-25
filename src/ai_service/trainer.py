@@ -22,6 +22,10 @@ import paths
 NUM_PROCS = 2
 
 
+def default_encodings_data():
+    return {'encodings': [], 'names': [], 'image_paths': []}
+
+
 class Trainer:
     thread = None  # background thread that reads faces detected
     times_read = 0
@@ -29,7 +33,7 @@ class Trainer:
     # default initial encodings data in case a client calls
     # get_encodings_data() before the pickle finishes loading
     # on startup
-    encodings_data = {'encodings': [], 'names': [], 'image_paths': []}
+    encodings_data = default_encodings_data()
     # used to prompt the trainer thread to run _retrain_model()
     retrain_needed_event = threading.Event()
 
@@ -73,6 +77,10 @@ class Trainer:
     # will self correct on the next iteration of retrain_model()
     def trigger_retrain(self):
         Trainer.retrain_needed_event.set()
+
+    def trigger_retrain_all(self):
+        Trainer.encodings_data = default_encodings_data()
+        self.trigger_retrain()
 
     @classmethod
     def stats(cls):

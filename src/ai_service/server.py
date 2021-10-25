@@ -126,6 +126,12 @@ def retrain_model():
     return respond_ok()
 
 
+@app.route('/retrainAll')
+def retrain_all():
+    trainer.trigger_retrain_all()
+    return respond_ok()
+
+
 @app.route('/names')
 def names():
     return respond_ok(acquirer.get_names())
