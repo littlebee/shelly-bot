@@ -40,6 +40,7 @@ POSES = [
     "Make love to my cold electronic eye.  Yaaaassss.",
     "Strike a pose, let's get down to it.",
     "Give me fierce, yaaaas."
+    "Hey!  Eyes up here, buddy"
 ]
 
 REJECTIONS = [
