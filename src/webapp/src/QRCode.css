@@ -1,0 +1,18 @@
+.qr-code {
+  display: flex;
+  flex-direction: row;
+  width: 150px;
+  padding-top: 10px;
+}
+
+.qr-code img {
+  width: 100%;
+}
+
+.qr-code-text {
+  flex-grow: 1;
+  text-align: left;
+  white-space: nowrap;
+  padding-top: 40px;
+  padding-left: 10px;
+}
