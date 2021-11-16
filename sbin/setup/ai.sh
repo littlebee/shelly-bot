@@ -194,3 +194,7 @@ sudo pip3 install webrtcvad
 mkdir -p $TARGET_DIR/data
 mkdir -p $TARGET_DIR/data/engagement
 mkdir -p $TARGET_DIR/data/faces
+
+# start webserver on boot
+cp $TARGET_DIR/sbin/rclocal/ai.sh /etc/rc.local
+chmod +x /etc/rc.local

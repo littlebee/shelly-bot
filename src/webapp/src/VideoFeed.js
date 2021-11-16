@@ -10,7 +10,7 @@ export function VideoFeed() {
   useEffect(() => {
     setInterval(() => {
       setRand(Math.random());
-      setErrorMessage(null);
+      // setErrorMessage(null);
     }, 15000);
   }, []);
 

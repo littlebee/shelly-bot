@@ -1,3 +1,9 @@
-.video-feed img {
+.video-feed {
   width: 660px;
+  min-height: 480px;
+  text-align: center;
+}
+
+.video-feed img {
+  width: 100%;
 }
